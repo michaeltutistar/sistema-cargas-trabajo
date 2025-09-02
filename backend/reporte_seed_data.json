@@ -1,0 +1,262 @@
+{
+  "fechaExtraccion": "2025-06-06T02:30:59.803Z",
+  "totalProcedimientos": 130,
+  "totalDependencias": 6,
+  "totalEmpleos": 10,
+  "hojasAnalizadas": [
+    "Dirección General",
+    "Control Interno",
+    "Of. Planeación",
+    "Of. Jurídica",
+    "Secret. General",
+    "Subd. Operaciones"
+  ],
+  "dependencias": [
+    {
+      "nombre": "Dirección General",
+      "descripcion": "Dependencia Dirección General - Extraída del análisis de cargas de trabajo"
+    },
+    {
+      "nombre": "Control Interno",
+      "descripcion": "Dependencia Control Interno - Extraída del análisis de cargas de trabajo"
+    },
+    {
+      "nombre": "Oficina de Planeación",
+      "descripcion": "Dependencia Of. Planeación - Extraída del análisis de cargas de trabajo"
+    },
+    {
+      "nombre": "Oficina Jurídica",
+      "descripcion": "Dependencia Of. Jurídica - Extraída del análisis de cargas de trabajo"
+    },
+    {
+      "nombre": "Secretaría General",
+      "descripcion": "Dependencia Secret. General - Extraída del análisis de cargas de trabajo"
+    },
+    {
+      "nombre": "Subdirección de Operaciones",
+      "descripcion": "Dependencia Subd. Operaciones - Extraída del análisis de cargas de trabajo"
+    }
+  ],
+  "empleos": [
+    {
+      "codigo": "001",
+      "denominacion": "Director General",
+      "nivelJerarquico": "DIRECTIVO",
+      "grado": 1
+    },
+    {
+      "codigo": "002",
+      "denominacion": "Subdirector",
+      "nivelJerarquico": "DIRECTIVO",
+      "grado": 2
+    },
+    {
+      "codigo": "050",
+      "denominacion": "Asesor Jurídico",
+      "nivelJerarquico": "ASESOR",
+      "grado": 1
+    },
+    {
+      "codigo": "051",
+      "denominacion": "Asesor de Planeación",
+      "nivelJerarquico": "ASESOR",
+      "grado": 1
+    },
+    {
+      "codigo": "100",
+      "denominacion": "Profesional Especializado",
+      "nivelJerarquico": "PROFESIONAL",
+      "grado": 1
+    },
+    {
+      "codigo": "101",
+      "denominacion": "Profesional Universitario",
+      "nivelJerarquico": "PROFESIONAL",
+      "grado": 2
+    },
+    {
+      "codigo": "200",
+      "denominacion": "Técnico Operativo",
+      "nivelJerarquico": "TECNICO",
+      "grado": 1
+    },
+    {
+      "codigo": "201",
+      "denominacion": "Técnico Administrativo",
+      "nivelJerarquico": "TECNICO",
+      "grado": 2
+    },
+    {
+      "codigo": "300",
+      "denominacion": "Auxiliar Administrativo",
+      "nivelJerarquico": "ASISTENCIAL",
+      "grado": 1
+    },
+    {
+      "codigo": "301",
+      "denominacion": "Secretario Ejecutivo",
+      "nivelJerarquico": "ASISTENCIAL",
+      "grado": 2
+    }
+  ],
+  "procedimientos": [
+    {
+      "hoja": "Dirección General",
+      "proceso": null,
+      "actividad": "ACTIVIDAD",
+      "procedimiento": "PROCEDIMIENTO",
+      "requisitos": null,
+      "cantidad": 5,
+      "tiempoMinimo": 24,
+      "tiempoPromedio": 32,
+      "tiempoMaximo": 40,
+      "tiempoCalculado": 34.24,
+      "fila": 13
+    },
+    {
+      "hoja": "Dirección General",
+      "proceso": null,
+      "actividad": "ACTIVIDAD",
+      "procedimiento": "PROCEDIMIENTO",
+      "requisitos": null,
+      "cantidad": 1,
+      "tiempoMinimo": 16,
+      "tiempoPromedio": 20,
+      "tiempoMaximo": 24,
+      "tiempoCalculado": 21.400000000000002,
+      "fila": 13
+    },
+    {
+      "hoja": "Dirección General",
+      "proceso": null,
+      "actividad": "ACTIVIDAD",
+      "procedimiento": "PROCEDIMIENTO EN EL MES",
+      "requisitos": null,
+      "cantidad": 1,
+      "tiempoMinimo": 8,
+      "tiempoPromedio": 12,
+      "tiempoMaximo": 16,
+      "tiempoCalculado": 12.84,
+      "fila": 13
+    },
+    {
+      "hoja": "Dirección General",
+      "proceso": null,
+      "actividad": "ACTIVIDAD",
+      "procedimiento": "PROCEDIMIENTO EN HORAS (TIEMPO  ESTANDAR)",
+      "requisitos": null,
+      "cantidad": 1,
+      "tiempoMinimo": 16,
+      "tiempoPromedio": 20,
+      "tiempoMaximo": 24,
+      "tiempoCalculado": 21.400000000000002,
+      "fila": 13
+    },
+    {
+      "hoja": "Dirección General",
+      "proceso": null,
+      "actividad": "ACTIVIDAD",
+      "procedimiento": "PROCEDIMIENTO",
+      "requisitos": null,
+      "cantidad": 1,
+      "tiempoMinimo": 4,
+      "tiempoPromedio": 6,
+      "tiempoMaximo": 9,
+      "tiempoCalculado": 6.598333333333334,
+      "fila": 13
+    },
+    {
+      "hoja": "Dirección General",
+      "proceso": "PROCESO 1",
+      "actividad": "FASE 1",
+      "procedimiento": "PROCEDIMIENTO 1",
+      "requisitos": null,
+      "cantidad": 20,
+      "tiempoMinimo": 5,
+      "tiempoPromedio": 7,
+      "tiempoMaximo": 9,
+      "tiempoCalculado": 7.49,
+      "fila": 15
+    },
+    {
+      "hoja": "Dirección General",
+      "proceso": "PROCESO 1",
+      "actividad": "FASE 1",
+      "procedimiento": "PROCEDIMIENTO 2",
+      "requisitos": null,
+      "cantidad": 50,
+      "tiempoMinimo": 8,
+      "tiempoPromedio": 16,
+      "tiempoMaximo": 20,
+      "tiempoCalculado": 16.40666666666667,
+      "fila": 16
+    },
+    {
+      "hoja": "Dirección General",
+      "proceso": "PROCESO 1",
+      "actividad": "FASE 1",
+      "procedimiento": "PROCEDIMIENTO 3",
+      "requisitos": null,
+      "cantidad": 30,
+      "tiempoMinimo": 8,
+      "tiempoPromedio": 15,
+      "tiempoMaximo": 30,
+      "tiempoCalculado": 17.476666666666667,
+      "fila": 17
+    },
+    {
+      "hoja": "Dirección General",
+      "proceso": "PROCESO 1",
+      "actividad": "FASE 1",
+      "procedimiento": "PROCEDIMIENTO 4",
+      "requisitos": null,
+      "cantidad": 20,
+      "tiempoMinimo": 18,
+      "tiempoPromedio": 22,
+      "tiempoMaximo": 30,
+      "tiempoCalculado": 24.253333333333337,
+      "fila": 18
+    },
+    {
+      "hoja": "Dirección General",
+      "proceso": "PROCESO 1",
+      "actividad": "FASE 2",
+      "procedimiento": "PROCEDIMIENTO 1",
+      "requisitos": null,
+      "cantidad": 60,
+      "tiempoMinimo": 2,
+      "tiempoPromedio": 4,
+      "tiempoMaximo": 7,
+      "tiempoCalculado": 4.458333333333334,
+      "fila": 19
+    }
+  ],
+  "estadisticas": {
+    "procedimientosPorHoja": [
+      {
+        "hoja": "Dirección General",
+        "cantidad": 25
+      },
+      {
+        "hoja": "Control Interno",
+        "cantidad": 5
+      },
+      {
+        "hoja": "Of. Planeación",
+        "cantidad": 25
+      },
+      {
+        "hoja": "Of. Jurídica",
+        "cantidad": 25
+      },
+      {
+        "hoja": "Secret. General",
+        "cantidad": 25
+      },
+      {
+        "hoja": "Subd. Operaciones",
+        "cantidad": 25
+      }
+    ]
+  }
+}

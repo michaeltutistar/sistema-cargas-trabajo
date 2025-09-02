@@ -1,0 +1,80 @@
+-- Comandos para ejecutar paso a paso en MySQL
+-- Copia y pega cada comando uno por uno
+
+-- PASO 1: Verificar qué columnas existen
+DESCRIBE tiempos_procedimientos;
+
+-- PASO 2: Verificar si existen las columnas de horas hombre
+SHOW COLUMNS FROM tiempos_procedimientos LIKE 'horas_%';
+
+-- PASO 3: Si no aparecen columnas en el paso 2, agregar horas_directivo
+ALTER TABLE `tiempos_procedimientos` 
+ADD COLUMN `horas_directivo` decimal(10,2) DEFAULT 0.00 COMMENT 'Horas hombre para nivel Directivo';
+
+-- PASO 4: Agregar horas_asesor
+ALTER TABLE `tiempos_procedimientos` 
+ADD COLUMN `horas_asesor` decimal(10,2) DEFAULT 0.00 COMMENT 'Horas hombre para nivel Asesor';
+
+-- PASO 5: Agregar horas_profesional
+ALTER TABLE `tiempos_procedimientos` 
+ADD COLUMN `horas_profesional` decimal(10,2) DEFAULT 0.00 COMMENT 'Horas hombre para nivel Profesional';
+
+-- PASO 6: Agregar horas_tecnico
+ALTER TABLE `tiempos_procedimientos` 
+ADD COLUMN `horas_tecnico` decimal(10,2) DEFAULT 0.00 COMMENT 'Horas hombre para nivel Técnico';
+
+-- PASO 7: Agregar horas_asistencial
+ALTER TABLE `tiempos_procedimientos` 
+ADD COLUMN `horas_asistencial` decimal(10,2) DEFAULT 0.00 COMMENT 'Horas hombre para nivel Asistencial';
+
+-- PASO 8: Verificar que se agregaron las columnas
+SHOW COLUMNS FROM tiempos_procedimientos LIKE 'horas_%';
+
+-- PASO 9: Ahora crear la vista
+DROP VIEW IF EXISTS `v_totales_por_niveles`;
+
+-- PASO 10: Crear la vista
+CREATE VIEW `v_totales_por_niveles` AS
+SELECT 
+    'DIRECTIVO' as nivel_jerarquico,
+    SUM(horas_directivo) as total_horas
+FROM tiempos_procedimientos 
+WHERE activo = 1
+
+UNION ALL
+
+SELECT 
+    'ASESOR' as nivel_jerarquico,
+    SUM(horas_asesor) as total_horas
+FROM tiempos_procedimientos 
+WHERE activo = 1
+
+UNION ALL
+
+SELECT 
+    'PROFESIONAL' as nivel_jerarquico,
+    SUM(horas_profesional) as total_horas
+FROM tiempos_procedimientos 
+WHERE activo = 1
+
+UNION ALL
+
+SELECT 
+    'TECNICO' as nivel_jerarquico,
+    SUM(horas_tecnico) as total_horas
+FROM tiempos_procedimientos 
+WHERE activo = 1
+
+UNION ALL
+
+SELECT 
+    'ASISTENCIAL' as nivel_jerarquico,
+    SUM(horas_asistencial) as total_horas
+FROM tiempos_procedimientos 
+WHERE activo = 1;
+
+-- PASO 11: Verificar que la vista se creó
+SHOW TABLES LIKE 'v_%';
+
+-- PASO 12: Probar la vista
+SELECT * FROM v_totales_por_niveles; 
