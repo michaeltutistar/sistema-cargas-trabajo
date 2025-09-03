@@ -246,7 +246,7 @@ export default function GestionEstructura() {
           console.log('🔍 Procedimiento padre encontrado:', procedimientoPadre);
           console.log('🔍 Elemento ID del procedimiento:', procedimientoPadre.elementoId);
           
-          elementoCreado = await apiService.crearActividad({
+          elementoCreado = await apiService.createActividad({
             nombre: data.nombre,
             procedimientoId: procedimientoPadre.elementoId, // Usar el ID numérico del procedimiento
             orden: data.orden || 1

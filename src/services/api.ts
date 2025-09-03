@@ -641,13 +641,7 @@ class ApiService {
     return response.data;
   }
 
-  async crearActividad(data: { nombre: string; procesoId: string; orden: number }): Promise<any> {
-    const response = await this.request<ApiResponse<any>>('/actividades', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-    return response.data;
-  }
+
 
 
 
