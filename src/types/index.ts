@@ -222,6 +222,14 @@ export interface CrearProcedimientoDTO {
   orden: number;
 }
 
+export interface CrearActividadDTO {
+  nombre: string;
+  descripcion?: string;
+  procesoId?: string;
+  procedimientoId?: string;
+  orden: number;
+}
+
 export interface CrearUsuarioDTO {
   email: string;
   password: string;

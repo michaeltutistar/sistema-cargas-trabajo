@@ -15,7 +15,8 @@ import {
   ElementoEstructura,
   EstructuraCompleta,
   CrearEstructuraDTO,
-  CrearElementoEstructuraDTO
+  CrearElementoEstructuraDTO,
+  CrearActividadDTO
 } from '../types';
 
 
@@ -291,7 +292,7 @@ class ApiService {
     return [];
   }
 
-  async createActividad(data: { nombre: string; descripcion?: string; procesoId?: number; procedimientoId?: number }): Promise<Actividad> {
+  async createActividad(data: CrearActividadDTO): Promise<Actividad> {
     console.log('🔍 createActividad() - Llamando API real');
     const response = await this.request<ApiResponse<Actividad>>('/actividades', {
       method: 'POST',
