@@ -7,6 +7,7 @@ import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
+import banner from '../assets/banner.png';
 
 const Login: React.FC = () => {
   const { login, isLoading } = useAuth();
@@ -49,7 +50,7 @@ const Login: React.FC = () => {
       <div className="w-full max-w-md space-y-8 p-8">
         <div className="text-center">
           <img
-            src="/src/assets/banner.png"
+            src={banner}
             alt="Banner de la aplicación"
             className="mx-auto mb-3 w-120 h-auto"
           />

@@ -32,6 +32,7 @@ import {
   Menu,
   Building
 } from 'lucide-react';
+import logoTAC from '../assets/TAC.png';
 
 // Configuración de menús por rol
 const menuConfig = {
@@ -154,7 +155,7 @@ const Layout: React.FC = () => {
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-2 px-3 py-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <img src="/src/assets/TAC.png" alt="Logo TAC" className="h-10 w-10 object-contain" />
+            <img src={logoTAC} alt="Logo TAC" className="h-10 w-10 object-contain" />
           </div>
           <div className="grid flex-1 text-left text-sm leading-tight">
             <span className="truncate font-semibold">Sistema de Cargas</span>
