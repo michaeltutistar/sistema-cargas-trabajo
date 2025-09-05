@@ -1,147 +1,86 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# ============================================================================
-# SCRIPT DE DEPLOY AUTOMÁTICO
-# Sistema de Gestión de Cargas de Trabajo
-# ============================================================================
+# Uso: ./deploy.sh [branch]
+# Variables opcionales:
+#   PM2_APP (por defecto: cargas-trabajo)
+#   ECOSYSTEM (por defecto: ecosystem.config.js)
 
-set -e  # Salir si hay algún error
+BRANCH="${1:-main}"
+PM2_APP="${PM2_APP:-cargas-trabajo}"
+ECOSYSTEM="${ECOSYSTEM:-ecosystem.config.js}"
 
-echo "🚀 Iniciando deploy automático..."
-echo "=================================="
+has_cmd() { command -v "$1" >/dev/null 2>&1; }
 
-# Colores para output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+echo "==> Directorio: $(pwd)"
 
-# Función para logging
-log() {
-    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $1"
-}
-
-error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-# Verificar que estamos en el directorio correcto
-if [ ! -f "servidor-produccion.js" ]; then
-    error "No se encontró servidor-produccion.js. Ejecuta desde el directorio raíz del proyecto."
-    exit 1
+if ! has_cmd git; then
+  echo "[ERROR] git no está instalado." >&2
+  exit 1
 fi
 
-log "Verificando estado actual..."
+# 1) Actualizar código
+echo "==> Actualizando código (branch: ${BRANCH})"
+ git fetch --all
+ git checkout "${BRANCH}"
+ git pull --ff-only
 
-# Backup de la base de datos
-if [ -f "cargas_trabajo.db" ]; then
-    log "Creando backup de la base de datos..."
-    cp cargas_trabajo.db "backup/cargas_trabajo_$(date +%Y%m%d_%H%M%S).db"
-    success "Backup creado exitosamente"
+# 2) PNPM y dependencias
+if ! has_cmd pnpm; then
+  echo "==> Activando corepack y preparando pnpm"
+  if has_cmd corepack; then
+    corepack enable || true
+    corepack prepare pnpm@latest --activate || true
+  else
+    echo "[WARN] corepack no disponible; se usará npx pnpm si es posible"
+  fi
 fi
 
-# Obtener últimos cambios del repositorio (si es git)
-if [ -d ".git" ]; then
-    log "Obteniendo últimos cambios del repositorio..."
-    git pull origin main
-    success "Cambios obtenidos del repositorio"
-fi
-
-# Instalar dependencias del frontend
-log "Instalando dependencias del frontend..."
-if command -v pnpm &> /dev/null; then
-    pnpm install
+# Instalar deps (incluye devDependencies para build)
+echo "==> Instalando dependencias con pnpm"
+if has_cmd pnpm; then
+  pnpm install --frozen-lockfile
 else
-    npm install
+  npx pnpm install --frozen-lockfile
 fi
-success "Dependencias del frontend instaladas"
 
-# Construir el frontend
-log "Construyendo frontend..."
-if command -v pnpm &> /dev/null; then
-    pnpm run build
-else
-    npm run build
-fi
-success "Frontend construido exitosamente"
+# 3) Build frontend
+echo "==> Compilando TypeScript"
+ npx tsc -b
 
-# Instalar dependencias del backend
-log "Instalando dependencias del backend..."
-cd backend
-npm install
-cd ..
-success "Dependencias del backend instaladas"
+echo "==> Construyendo frontend con Vite"
+ npx vite build
 
-# Crear directorio de logs si no existe
+# 4) Logs para PM2
 mkdir -p logs
 
-# Reiniciar la aplicación con PM2
-log "Reiniciando aplicación con PM2..."
-if command -v pm2 &> /dev/null; then
-    pm2 restart ecosystem.config.js --env production
-    success "Aplicación reiniciada con PM2"
-    
-    # Verificar estado
-    log "Verificando estado de la aplicación..."
-    pm2 status cargas-trabajo
-    
-    # Guardar configuración PM2
-    pm2 save
-    success "Configuración PM2 guardada"
-else
-    warning "PM2 no está instalado. Reiniciando manualmente..."
-    # Matar proceso existente si está corriendo
-    pkill -f "servidor-produccion.js" || true
-    
-    # Iniciar nuevo proceso
-    nohup node servidor-produccion.js > logs/app.log 2>&1 &
-    success "Aplicación iniciada manualmente"
+# 5) PM2 start/reload
+if ! has_cmd pm2; then
+  echo "[ERROR] pm2 no está instalado. Instálalo con: npm i -g pm2" >&2
+  exit 1
 fi
 
-# Verificar que la aplicación esté funcionando
-log "Verificando que la aplicación esté funcionando..."
-sleep 5
-
-if curl -s http://localhost:8080/api/health > /dev/null 2>&1; then
-    success "✅ Aplicación funcionando correctamente en puerto 8080"
+echo "==> Iniciando/recargando PM2 (${PM2_APP})"
+if pm2 describe "${PM2_APP}" >/dev/null 2>&1; then
+  pm2 reload "${PM2_APP}"
 else
-    warning "⚠️  La aplicación podría no estar funcionando. Verifica los logs."
+  pm2 start "${ECOSYSTEM}" --env production
 fi
 
-# Limpiar archivos temporales
-log "Limpiando archivos temporales..."
-rm -rf node_modules/.vite-temp 2>/dev/null || true
+# 6) Mostrar estado
+pm2 list | sed -n '1,200p'
 
-# Mostrar información final
-echo ""
-echo "🎉 ================================================"
-echo "✅ DEPLOY COMPLETADO EXITOSAMENTE"
-echo "🎉 ================================================"
-echo ""
-echo "📊 Estado de la aplicación:"
-if command -v pm2 &> /dev/null; then
-    pm2 status cargas-trabajo
+# 7) Recargar Nginx (opcional)
+if has_cmd nginx && has_cmd systemctl; then
+  echo "==> Probando configuración de Nginx"
+  if sudo nginx -t; then
+    echo "==> Recargando Nginx"
+    sudo systemctl reload nginx || true
+  else
+    echo "[WARN] nginx -t falló; no se recarga Nginx"
+  fi
 else
-    echo "   Proceso manual en ejecución"
+  echo "[INFO] Nginx/systemctl no disponible. Saltando recarga de Nginx"
 fi
 
-echo ""
-echo "🌐 URLs de acceso:"
-echo "   Frontend: http://localhost:8080"
-echo "   API: http://localhost:8080/api"
-echo "   Health Check: http://localhost:8080/api/health"
-echo ""
-echo "📁 Logs disponibles en: ./logs/"
-echo "🔧 Para monitorear: pm2 monit cargas-trabajo"
-echo "🔄 Para reiniciar: pm2 restart cargas-trabajo"
-echo ""
-echo "================================================" 
+echo "✅ Despliegue completado con éxito" 
