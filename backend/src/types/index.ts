@@ -102,6 +102,8 @@ export interface TiempoProcedimiento {
   horasProfesional: number;
   horasTecnico: number;
   horasAsistencial: number;
+  horasContratista: number;
+  horasTrabajadorOficial: number;
   observaciones?: string;
   activo: boolean;
   fechaCreacion: Date;
@@ -209,6 +211,8 @@ export interface CrearTiempoProcedimientoDTO {
   horasProfesional?: number;
   horasTecnico?: number;
   horasAsistencial?: number;
+  horasContratista?: number;
+  horasTrabajadorOficial?: number;
   observaciones?: string;
 }
 
@@ -222,6 +226,8 @@ export interface ActualizarTiempoProcedimientoDTO {
   horasProfesional?: number;
   horasTecnico?: number;
   horasAsistencial?: number;
+  horasContratista?: number;
+  horasTrabajadorOficial?: number;
   observaciones?: string;
 }
 

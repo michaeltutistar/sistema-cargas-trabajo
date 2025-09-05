@@ -29,6 +29,8 @@ export class TiempoProcedimientoModel extends BaseModel<TiempoProcedimiento> {
       horasProfesional: row.horas_profesional || 0,
       horasTecnico: row.horas_tecnico || 0,
       horasAsistencial: row.horas_asistencial || 0,
+      horasContratista: row.horas_contratista || 0,
+      horasTrabajadorOficial: row.horas_trabajador_oficial || 0,
       observaciones: row.observaciones,
       activo: row.activo === 1,
       fechaCreacion: new Date(row.fecha_creacion),
@@ -183,11 +185,9 @@ export class TiempoProcedimientoModel extends BaseModel<TiempoProcedimiento> {
         horasAsistencial = horasDelNivel;
         break;
       case 'CONTRATISTA':
-        // Usar la nueva columna específica para contratista
         horasContratista = horasDelNivel;
         break;
       case 'TRABAJADOR_OFICIAL':
-        // Usar la nueva columna específica para trabajador oficial
         horasTrabajadorOficial = horasDelNivel;
         break;
       default:
@@ -410,6 +410,8 @@ export class TiempoProcedimientoModel extends BaseModel<TiempoProcedimiento> {
           const horasProfesional = (tiempo.horasProfesional / tiempo.frecuenciaMensual) * tiempo.frecuenciaMensual;
           const horasTecnico = (tiempo.horasTecnico / tiempo.frecuenciaMensual) * tiempo.frecuenciaMensual;
           const horasAsistencial = (tiempo.horasAsistencial / tiempo.frecuenciaMensual) * tiempo.frecuenciaMensual;
+          const horasContratista = (tiempo.horasContratista / tiempo.frecuenciaMensual) * tiempo.frecuenciaMensual;
+          const horasTrabajadorOficial = (tiempo.horasTrabajadorOficial / tiempo.frecuenciaMensual) * tiempo.frecuenciaMensual;
 
           await connection.query(
             `UPDATE tiempos_procedimientos 
@@ -419,9 +421,11 @@ export class TiempoProcedimientoModel extends BaseModel<TiempoProcedimiento> {
                  horas_profesional = ?, 
                  horas_tecnico = ?, 
                  horas_asistencial = ?, 
+                 horas_contratista = ?, 
+                 horas_trabajador_oficial = ?, 
                  fecha_actualizacion = ? 
              WHERE id = ?`,
-            [tiempoEstandar, horasDirectivo, horasAsesor, horasProfesional, horasTecnico, horasAsistencial, new Date().toISOString(), tiempo.id]
+            [tiempoEstandar, horasDirectivo, horasAsesor, horasProfesional, horasTecnico, horasAsistencial, horasContratista, horasTrabajadorOficial, new Date().toISOString(), tiempo.id]
           );
 
           actualizados++;
@@ -449,12 +453,14 @@ export class TiempoProcedimientoModel extends BaseModel<TiempoProcedimiento> {
         d.id as dependencia_id,
         d.nombre as dependencia_nombre,
         COUNT(DISTINCT t.procedimiento_id) as total_procedimientos,
-        SUM(t.horas_directivo + t.horas_asesor + t.horas_profesional + t.horas_tecnico + t.horas_asistencial) as total_horas,
+        SUM(t.horas_directivo + t.horas_asesor + t.horas_profesional + t.horas_tecnico + t.horas_asistencial + t.horas_contratista + t.horas_trabajador_oficial) as total_horas,
         SUM(t.horas_directivo) as horas_directivo,
         SUM(t.horas_asesor) as horas_asesor,
         SUM(t.horas_profesional) as horas_profesional,
         SUM(t.horas_tecnico) as horas_tecnico,
-        SUM(t.horas_asistencial) as horas_asistencial
+        SUM(t.horas_asistencial) as horas_asistencial,
+        SUM(t.horas_contratista) as horas_contratista,
+        SUM(t.horas_trabajador_oficial) as horas_trabajador_oficial
       FROM dependencias d
       INNER JOIN procesos p ON d.id = p.dependencia_id
       INNER JOIN actividades a ON p.id = a.proceso_id
@@ -477,7 +483,9 @@ export class TiempoProcedimientoModel extends BaseModel<TiempoProcedimiento> {
         ASESOR: Math.round((row.horas_asesor || 0) * 100) / 100,
         PROFESIONAL: Math.round((row.horas_profesional || 0) * 100) / 100,
         TECNICO: Math.round((row.horas_tecnico || 0) * 100) / 100,
-        ASISTENCIAL: Math.round((row.horas_asistencial || 0) * 100) / 100
+        ASISTENCIAL: Math.round((row.horas_asistencial || 0) * 100) / 100,
+        CONTRATISTA: Math.round((row.horas_contratista || 0) * 100) / 100,
+        TRABAJADOR_OFICIAL: Math.round((row.horas_trabajador_oficial || 0) * 100) / 100
       }
     }));
   }
@@ -739,6 +747,16 @@ export class TiempoProcedimientoModel extends BaseModel<TiempoProcedimiento> {
     if (datos.horasAsistencial !== undefined) {
       camposActualizar.push('horas_asistencial = ?');
       valores.push(datos.horasAsistencial);
+    }
+
+    if (datos.horasContratista !== undefined) {
+      camposActualizar.push('horas_contratista = ?');
+      valores.push(datos.horasContratista);
+    }
+
+    if (datos.horasTrabajadorOficial !== undefined) {
+      camposActualizar.push('horas_trabajador_oficial = ?');
+      valores.push(datos.horasTrabajadorOficial);
     }
 
     if (datos.observaciones !== undefined) {
@@ -1104,6 +1122,8 @@ export class TiempoProcedimientoModel extends BaseModel<TiempoProcedimiento> {
     let horasProfesional = 0;
     let horasTecnico = 0;
     let horasAsistencial = 0;
+    let horasContratista = 0;
+    let horasTrabajadorOficial = 0;
 
     // Asignar las horas al nivel jerárquico correspondiente
     switch (nivelJerarquico) {
@@ -1123,8 +1143,10 @@ export class TiempoProcedimientoModel extends BaseModel<TiempoProcedimiento> {
         horasAsistencial = horasDelNivel;
         break;
       case 'CONTRATISTA':
-        // Para contratista, se puede asignar a asistencial o crear una nueva columna
-        horasAsistencial = horasDelNivel;
+        horasContratista = horasDelNivel;
+        break;
+      case 'TRABAJADOR_OFICIAL':
+        horasTrabajadorOficial = horasDelNivel;
         break;
       default:
         console.warn(`⚠️ Nivel jerárquico no reconocido: ${nivelJerarquico}`);
@@ -1137,6 +1159,8 @@ export class TiempoProcedimientoModel extends BaseModel<TiempoProcedimiento> {
     console.log(`   - Profesional: ${horasProfesional}`);
     console.log(`   - Técnico: ${horasTecnico}`);
     console.log(`   - Asistencial: ${horasAsistencial}`);
+    console.log(`   - Contratista: ${horasContratista}`);
+    console.log(`   - Trabajador Oficial: ${horasTrabajadorOficial}`);
 
     if ((tiempoExistente as any[]).length > 0) {
       // Si existe, actualizar
@@ -1155,6 +1179,8 @@ export class TiempoProcedimientoModel extends BaseModel<TiempoProcedimiento> {
             horas_profesional = ?,
             horas_tecnico = ?,
             horas_asistencial = ?,
+            horas_contratista = ?,
+            horas_trabajador_oficial = ?,
             observaciones = ?,
             fecha_actualizacion = NOW()
         WHERE id = ?
@@ -1169,6 +1195,8 @@ export class TiempoProcedimientoModel extends BaseModel<TiempoProcedimiento> {
         horasProfesional,
         horasTecnico,
         horasAsistencial,
+        horasContratista,
+        horasTrabajadorOficial,
         datos.observaciones || null,
         tiempoId
       ]);
@@ -1203,8 +1231,10 @@ export class TiempoProcedimientoModel extends BaseModel<TiempoProcedimiento> {
           horas_profesional,
           horas_tecnico,
           horas_asistencial,
+          horas_contratista,
+          horas_trabajador_oficial,
           observaciones
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         datos.procedimientoId,
         datos.empleoId,
@@ -1222,6 +1252,8 @@ export class TiempoProcedimientoModel extends BaseModel<TiempoProcedimiento> {
         horasProfesional,
         horasTecnico,
         horasAsistencial,
+        horasContratista,
+        horasTrabajadorOficial,
         datos.observaciones || null
       ]);
 
