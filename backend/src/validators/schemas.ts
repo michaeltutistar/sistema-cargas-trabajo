@@ -12,6 +12,7 @@ const passwordSchema = Joi.string().min(6).max(50).required();
 const nombreSchema = Joi.string().min(2).max(100).required();
 const codigoSchema = Joi.string().min(2).max(50).required();
 const descripcionSchema = Joi.string().max(500).allow('').optional();
+const nombreActividadSchema = Joi.string().min(2).required();
 
 // Esquemas de validación para usuarios
 export const loginSchema = Joi.object({
@@ -68,7 +69,7 @@ export const actualizarProcesoSchema = Joi.object({
 export const crearActividadSchema = Joi.object({
   procesoId: idSchema.optional(),
   procedimientoId: idSchema.optional(),
-  nombre: nombreSchema,
+  nombre: nombreActividadSchema,
   descripcion: descripcionSchema,
   orden: Joi.number().integer().min(1).required()
 }).custom((value, helpers) => {
@@ -84,7 +85,7 @@ export const crearActividadSchema = Joi.object({
 export const actualizarActividadSchema = Joi.object({
   procesoId: idSchema.optional(),
   procedimientoId: idSchema.optional(),
-  nombre: nombreSchema.optional(),
+  nombre: nombreActividadSchema.optional(),
   descripcion: descripcionSchema,
   codigo: codigoSchema.optional(),
   orden: Joi.number().integer().min(1).optional(),
