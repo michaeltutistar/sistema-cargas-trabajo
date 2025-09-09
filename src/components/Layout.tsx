@@ -185,6 +185,36 @@ const Layout: React.FC = () => {
             );
           })}
         </SidebarMenu>
+        {/* Bloque de instrucciones */}
+        <div className="px-3 py-3">
+          <div className="rounded-md border border-sidebar-border bg-background p-3">
+            <p className="text-xs font-semibold mb-2">
+              El registro de los tiempos se realiza en horas. A continuación, encuentra la tabla de equivalencias. Por favor, haga uso de la columna "HORAS".
+            </p>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left">
+                  <th className="py-1 pr-4">MINUTOS</th>
+                  <th className="py-1">HORAS</th>
+                </tr>
+              </thead>
+              <tbody className="align-top">
+                <tr><td className="py-0.5 pr-4">5 minutos</td><td className="py-0.5 font-semibold">0,083</td></tr>
+                <tr><td className="py-0.5 pr-4">10 minutos</td><td className="py-0.5 font-semibold">0,167</td></tr>
+                <tr><td className="py-0.5 pr-4">15 minutos</td><td className="py-0.5 font-semibold">0,250</td></tr>
+                <tr><td className="py-0.5 pr-4">20 minutos</td><td className="py-0.5 font-semibold">0,333</td></tr>
+                <tr><td className="py-0.5 pr-4">25 minutos</td><td className="py-0.5 font-semibold">0,417</td></tr>
+                <tr><td className="py-0.5 pr-4">30 minutos</td><td className="py-0.5 font-semibold">0,500</td></tr>
+                <tr><td className="py-0.5 pr-4">35 minutos</td><td className="py-0.5 font-semibold">0,583</td></tr>
+                <tr><td className="py-0.5 pr-4">40 minutos</td><td className="py-0.5 font-semibold">0,667</td></tr>
+                <tr><td className="py-0.5 pr-4">45 minutos</td><td className="py-0.5 font-semibold">0,750</td></tr>
+                <tr><td className="py-0.5 pr-4">50 minutos</td><td className="py-0.5 font-semibold">0,833</td></tr>
+                <tr><td className="py-0.5 pr-4">55 minutos</td><td className="py-0.5 font-semibold">0,917</td></tr>
+                <tr><td className="py-0.5 pr-4">1 hora</td><td className="py-0.5 font-semibold">1</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </SidebarContent>
     </Sidebar>
   );

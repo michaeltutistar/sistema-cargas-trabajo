@@ -65,13 +65,13 @@ const tiempoSchema = z.object({
   }, {
     message: 'Ingresar nuevo valor'
   }),
-  tiempoMinimo: z.number().optional().refine((val) => !val || (!isNaN(val) && val >= 0.1), {
+  tiempoMinimo: z.number().optional().refine((val) => !val || (!isNaN(val) && val >= 0.001), {
     message: 'El tiempo mínimo debe ser mayor a 0'
   }),
-  tiempoPromedio: z.number().optional().refine((val) => !val || (!isNaN(val) && val >= 0.1), {
+  tiempoPromedio: z.number().optional().refine((val) => !val || (!isNaN(val) && val >= 0.001), {
     message: 'El tiempo promedio debe ser mayor a 0'
   }),
-  tiempoMaximo: z.number().optional().refine((val) => !val || (!isNaN(val) && val >= 0.1), {
+  tiempoMaximo: z.number().optional().refine((val) => !val || (!isNaN(val) && val >= 0.001), {
     message: 'El tiempo máximo debe ser mayor a 0'
   }),
   observaciones: z.string().optional()
@@ -117,6 +117,11 @@ const IngresoTiempos: React.FC = () => {
     'TRABAJADOR_OFICIAL'
   ]);
   const [empleosPorNivel, setEmpleosPorNivel] = useState<Empleo[]>([]);
+  
+  // Estados de entrada (string) para permitir coma y escritura parcial
+  const [tiempoMinimoStr, setTiempoMinimoStr] = useState<string>('');
+  const [tiempoPromedioStr, setTiempoPromedioStr] = useState<string>('');
+  const [tiempoMaximoStr, setTiempoMaximoStr] = useState<string>('');
   
   // Estado para los tiempos guardados en la sesión
   const [tiemposGuardados, setTiemposGuardados] = useState<Array<{
@@ -183,6 +188,13 @@ const IngresoTiempos: React.FC = () => {
   });
 
   const watchedValues = form.watch();
+
+  // Sincronizar estados string cuando se hace reset del formulario
+  useEffect(() => {
+    if (watchedValues.tiempoMinimo == null && tiempoMinimoStr !== '') setTiempoMinimoStr('');
+    if (watchedValues.tiempoPromedio == null && tiempoPromedioStr !== '') setTiempoPromedioStr('');
+    if (watchedValues.tiempoMaximo == null && tiempoMaximoStr !== '') setTiempoMaximoStr('');
+  }, [watchedValues.tiempoMinimo, watchedValues.tiempoPromedio, watchedValues.tiempoMaximo]);
 
   // Función para determinar si mostrar el campo de grado
   const mostrarCampoGrado = (nivelEmpleo: string): boolean => {
@@ -1198,14 +1210,30 @@ const IngresoTiempos: React.FC = () => {
                             <FormLabel>Tiempo Mínimo (horas)</FormLabel>
                             <FormControl>
                               <Input
-                                type="number"
-                                min="0.1"
-                                step="0.1"
-                                placeholder="0.5"
-                                value={field.value || ''}
+                                type="text"
+                                inputMode="decimal"
+                                pattern="[0-9]*[.,]?[0-9]{0,3}"
+                                placeholder="0,083"
+                                value={tiempoMinimoStr}
                                 onChange={(e) => {
-                                  const value = e.target.value;
-                                  field.onChange(value === '' ? undefined : parseFloat(value));
+                                  const raw = e.target.value;
+                                  setTiempoMinimoStr(raw);
+                                  const normalized = raw.replace(',', '.');
+                                  const fullMatch = /^\d+(?:[.,]\d{1,3})?$/.test(raw);
+                                  const intOnly = /^\d+$/.test(raw);
+                                  if (fullMatch || intOnly) {
+                                    const parsed = parseFloat(normalized);
+                                    field.onChange(Number.isFinite(parsed) ? parsed : undefined);
+                                  }
+                                }}
+                                onBlur={() => {
+                                  if (tiempoMinimoStr === '') {
+                                    field.onChange(undefined);
+                                    return;
+                                  }
+                                  const normalized = tiempoMinimoStr.replace(',', '.');
+                                  const parsed = parseFloat(normalized);
+                                  field.onChange(Number.isFinite(parsed) ? parsed : undefined);
                                 }}
                               />
                             </FormControl>
@@ -1222,14 +1250,30 @@ const IngresoTiempos: React.FC = () => {
                             <FormLabel>Tiempo Promedio (horas)</FormLabel>
                             <FormControl>
                               <Input
-                                type="number"
-                                min="0.1"
-                                step="0.1"
-                                placeholder="1.0"
-                                value={field.value || ''}
+                                type="text"
+                                inputMode="decimal"
+                                pattern="[0-9]*[.,]?[0-9]{0,3}"
+                                placeholder="1,000"
+                                value={tiempoPromedioStr}
                                 onChange={(e) => {
-                                  const value = e.target.value;
-                                  field.onChange(value === '' ? undefined : parseFloat(value));
+                                  const raw = e.target.value;
+                                  setTiempoPromedioStr(raw);
+                                  const normalized = raw.replace(',', '.');
+                                  const fullMatch = /^\d+(?:[.,]\d{1,3})?$/.test(raw);
+                                  const intOnly = /^\d+$/.test(raw);
+                                  if (fullMatch || intOnly) {
+                                    const parsed = parseFloat(normalized);
+                                    field.onChange(Number.isFinite(parsed) ? parsed : undefined);
+                                  }
+                                }}
+                                onBlur={() => {
+                                  if (tiempoPromedioStr === '') {
+                                    field.onChange(undefined);
+                                    return;
+                                  }
+                                  const normalized = tiempoPromedioStr.replace(',', '.');
+                                  const parsed = parseFloat(normalized);
+                                  field.onChange(Number.isFinite(parsed) ? parsed : undefined);
                                 }}
                               />
                             </FormControl>
@@ -1246,14 +1290,30 @@ const IngresoTiempos: React.FC = () => {
                             <FormLabel>Tiempo Máximo (horas)</FormLabel>
                             <FormControl>
                               <Input
-                                type="number"
-                                min="0.1"
-                                step="0.1"
-                                placeholder="2.0"
-                                value={field.value || ''}
+                                type="text"
+                                inputMode="decimal"
+                                pattern="[0-9]*[.,]?[0-9]{0,3}"
+                                placeholder="2,000"
+                                value={tiempoMaximoStr}
                                 onChange={(e) => {
-                                  const value = e.target.value;
-                                  field.onChange(value === '' ? undefined : parseFloat(value));
+                                  const raw = e.target.value;
+                                  setTiempoMaximoStr(raw);
+                                  const normalized = raw.replace(',', '.');
+                                  const fullMatch = /^\d+(?:[.,]\d{1,3})?$/.test(raw);
+                                  const intOnly = /^\d+$/.test(raw);
+                                  if (fullMatch || intOnly) {
+                                    const parsed = parseFloat(normalized);
+                                    field.onChange(Number.isFinite(parsed) ? parsed : undefined);
+                                  }
+                                }}
+                                onBlur={() => {
+                                  if (tiempoMaximoStr === '') {
+                                    field.onChange(undefined);
+                                    return;
+                                  }
+                                  const normalized = tiempoMaximoStr.replace(',', '.');
+                                  const parsed = parseFloat(normalized);
+                                  field.onChange(Number.isFinite(parsed) ? parsed : undefined);
                                 }}
                               />
                             </FormControl>
@@ -1316,15 +1376,15 @@ const IngresoTiempos: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Tiempo Mínimo:</span>
-                  <span className="font-mono">{watchedValues.tiempoMinimo ? watchedValues.tiempoMinimo.toFixed(2) : '0.00'}h</span>
+                  <span className="font-mono">{watchedValues.tiempoMinimo ? watchedValues.tiempoMinimo.toFixed(3) : '0.000'}h</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Tiempo Promedio:</span>
-                  <span className="font-mono">{watchedValues.tiempoPromedio ? watchedValues.tiempoPromedio.toFixed(2) : '0.00'}h</span>
+                  <span className="font-mono">{watchedValues.tiempoPromedio ? watchedValues.tiempoPromedio.toFixed(3) : '0.000'}h</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Tiempo Máximo:</span>
-                  <span className="font-mono">{watchedValues.tiempoMaximo ? watchedValues.tiempoMaximo.toFixed(2) : '0.00'}h</span>
+                  <span className="font-mono">{watchedValues.tiempoMaximo ? watchedValues.tiempoMaximo.toFixed(3) : '0.000'}h</span>
                 </div>
                 <div className="border-t pt-2">
                   <div className="flex justify-between font-semibold">
@@ -1521,11 +1581,13 @@ const IngresoTiempos: React.FC = () => {
                   <Input
                     id="edit-tiempo-minimo"
                     type="number"
-                    step="0.1"
+                    step="0.001"
+                    inputMode="decimal"
+                    pattern="[0-9]*[.,]?[0-9]{0,3}"
                     value={tiempoEditando.tiempoMinimo}
                     onChange={(e) => setTiempoEditando({
                       ...tiempoEditando,
-                      tiempoMinimo: parseFloat(e.target.value) || 0
+                      tiempoMinimo: parseFloat(e.target.value.replace(',', '.')) || 0
                     })}
                   />
                 </div>
@@ -1535,11 +1597,13 @@ const IngresoTiempos: React.FC = () => {
                   <Input
                     id="edit-tiempo-promedio"
                     type="number"
-                    step="0.1"
+                    step="0.001"
+                    inputMode="decimal"
+                    pattern="[0-9]*[.,]?[0-9]{0,3}"
                     value={tiempoEditando.tiempoPromedio}
                     onChange={(e) => setTiempoEditando({
                       ...tiempoEditando,
-                      tiempoPromedio: parseFloat(e.target.value) || 0
+                      tiempoPromedio: parseFloat(e.target.value.replace(',', '.')) || 0
                     })}
                   />
                 </div>
@@ -1549,11 +1613,13 @@ const IngresoTiempos: React.FC = () => {
                   <Input
                     id="edit-tiempo-maximo"
                     type="number"
-                    step="0.1"
+                    step="0.001"
+                    inputMode="decimal"
+                    pattern="[0-9]*[.,]?[0-9]{0,3}"
                     value={tiempoEditando.tiempoMaximo}
                     onChange={(e) => setTiempoEditando({
                       ...tiempoEditando,
-                      tiempoMaximo: parseFloat(e.target.value) || 0
+                      tiempoMaximo: parseFloat(e.target.value.replace(',', '.')) || 0
                     })}
                   />
                 </div>
