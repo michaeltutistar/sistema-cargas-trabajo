@@ -683,7 +683,7 @@ export const apiService = new ApiService();
 // Gestión de Usuarios
 export const usuarioService = {
   // Obtener todos los usuarios con filtros
-  async getUsuarios(filtros: any = {}, pagina: number = 1, limite: number = 10) {
+  async getUsuarios(filtros: any = {}, pagina: number = 1, limite: number = 100) {
     const params = new URLSearchParams({
       pagina: pagina.toString(),
       limite: limite.toString(),
