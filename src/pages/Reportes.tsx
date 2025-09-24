@@ -63,6 +63,8 @@ interface ProcedimientoReporte {
   actividad_id?: number;
   actividad_nombre?: string;
   actividad_descripcion?: string;
+  usuario_registra?: string;
+  fecha_registro?: string;
 }
 
 interface TotalesPorNivel {
@@ -290,7 +292,9 @@ const Reportes: React.FC = () => {
         'Horas Asistencial': parseFloat(String(proc.horas_asistencial)) || 0,
         'Horas Contratista': parseFloat(String(proc.horas_contratista)) || 0,
         'Horas Trabajador Oficial': parseFloat(String(proc.horas_trabajador_oficial)) || 0,
-        'Observaciones': proc.observaciones || ''
+        'Observaciones': proc.observaciones || '',
+        'Usuario': proc.usuario_registra || '',
+        'Fecha Registro': proc.fecha_registro || ''
       }));
 
       // Agregar fila de totales
@@ -341,7 +345,9 @@ const Reportes: React.FC = () => {
         'Horas Asistencial': totalesHoras.asistencial,
         'Horas Contratista': totalesHoras.contratista,
         'Horas Trabajador Oficial': totalesHoras.trabajadorOficial,
-        'Observaciones': ''
+        'Observaciones': '',
+        'Usuario': '',
+        'Fecha Registro': ''
       });
 
       // Agregar fila de personal requerido
@@ -361,7 +367,9 @@ const Reportes: React.FC = () => {
         'Horas Asistencial': personalRequerido.asistencial,
         'Horas Contratista': personalRequerido.contratista,
         'Horas Trabajador Oficial': personalRequerido.trabajadorOficial,
-        'Observaciones': ''
+        'Observaciones': '',
+        'Usuario': '',
+        'Fecha Registro': ''
       });
 
       // Crear hoja de procedimientos
@@ -384,7 +392,9 @@ const Reportes: React.FC = () => {
         { wch: 15 }, // Horas Asistencial
         { wch: 15 }, // Horas Contratista
         { wch: 15 }, // Horas Trabajador Oficial
-        { wch: 30 }  // Observaciones
+        { wch: 30 }, // Observaciones
+        { wch: 25 }, // Usuario
+        { wch: 15 }  // Fecha Registro
       ];
       procedimientosSheet['!cols'] = columnWidths;
 
@@ -667,6 +677,8 @@ const ReporteContent: React.FC<{ data: ReporteData }> = ({ data }) => {
                   <th className="border border-gray-300 px-3 py-2 text-center text-sm font-medium">Contratista</th>
                   <th className="border border-gray-300 px-3 py-2 text-center text-sm font-medium">Trabajador oficial</th>
                   <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Observaciones</th>
+                  <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Usuario</th>
+                  <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Fecha Registro</th>
                 </tr>
               </thead>
               <tbody>
@@ -688,6 +700,8 @@ const ReporteContent: React.FC<{ data: ReporteData }> = ({ data }) => {
                     <td className="border border-gray-300 px-3 py-2 text-sm text-center">{(parseFloat(String(proc.horas_contratista)) || 0).toFixed(2)}</td>
                     <td className="border border-gray-300 px-3 py-2 text-sm text-center">{(parseFloat(String(proc.horas_trabajador_oficial)) || 0).toFixed(2)}</td>
                     <td className="border border-gray-300 px-3 py-2 text-sm">{proc.observaciones || '-'}</td>
+                    <td className="border border-gray-300 px-3 py-2 text-sm">{proc.usuario_registra || '-'}</td>
+                    <td className="border border-gray-300 px-3 py-2 text-sm">{proc.fecha_registro || '-'}</td>
                   </tr>
                 ))}
                 {/* Fila de totales */}

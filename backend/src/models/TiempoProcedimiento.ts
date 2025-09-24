@@ -1318,7 +1318,9 @@ export class TiempoProcedimientoModel extends BaseModel<TiempoProcedimiento> {
           COALESCE(pr.descripcion, pr_fallback.descripcion) as proceso_descripcion,
           COALESCE(tp.actividad_id, a_fallback.id) as actividad_id,
           COALESCE(act.nombre, a_fallback.nombre) as actividad_nombre,
-          COALESCE(act.descripcion, a_fallback.descripcion) as actividad_descripcion
+          COALESCE(act.descripcion, a_fallback.descripcion) as actividad_descripcion,
+          COALESCE(CONCAT(u.nombre, ' ', u.apellido), u.email) as usuario_registra,
+          DATE_FORMAT(tp.fecha_creacion, '%Y-%m-%d') as fecha_registro
         FROM tiempos_procedimientos tp
         INNER JOIN procedimientos p ON tp.procedimiento_id = p.id
         INNER JOIN elementos_estructura ee_proc ON p.id = ee_proc.elemento_id AND ee_proc.tipo = 'procedimiento'
@@ -1326,6 +1328,7 @@ export class TiempoProcedimientoModel extends BaseModel<TiempoProcedimiento> {
         LEFT JOIN actividades act ON tp.actividad_id = act.id
         LEFT JOIN actividades a_fallback ON p.actividad_id = a_fallback.id
         LEFT JOIN procesos pr_fallback ON a_fallback.proceso_id = pr_fallback.id
+        LEFT JOIN usuarios u ON tp.usuario_id = u.id
         WHERE tp.activo = 1 
           AND tp.estructura_id = ?
           AND ee_proc.estructura_id = ?

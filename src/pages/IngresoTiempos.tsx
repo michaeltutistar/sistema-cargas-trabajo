@@ -1502,7 +1502,7 @@ const IngresoTiempos: React.FC = () => {
                           </h4>
                         </div>
                         <div className="text-sm text-muted-foreground space-y-1">
-                          <p><strong>Procedimiento:</strong> {tiempo.procedimientoNombre}</p>
+                          <p><strong>Actividad:</strong> {tiempo.actividadNombre}</p>
                           <div className="flex gap-4 text-xs">
                             <span><strong>Tiempo PERT:</strong> {tiempo.tiempoCalculadoPERT.toFixed(2)}h</span>
                             <span><strong>Frecuencia:</strong> {tiempo.frecuenciaMensual}/mes</span>
