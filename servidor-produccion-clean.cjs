@@ -1146,7 +1146,7 @@ app.get('/api/estructura/:id/dependencias', verificarToken, async (req, res) => 
   try {
     const [dependencias] = await pool.query(
       `SELECT d.* FROM dependencias d
-       INNER JOIN elementos_estructura ee ON d.id = ee.referencia_id
+       INNER JOIN elementos_estructura ee ON d.id = ee.elemento_id
        WHERE ee.estructura_id = ? AND ee.tipo = 'dependencia'
        ORDER BY ee.orden`,
       [req.params.id]
