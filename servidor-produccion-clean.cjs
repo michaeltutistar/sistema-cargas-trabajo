@@ -840,6 +840,153 @@ app.post('/api/cargas/tiempos/finalizar-registro', verificarToken, async (req, r
   }
 });
 
+// Endpoint para obtener totales por niveles jerárquicos para una dependencia
+app.get('/api/cargas/tiempos/totales-por-niveles/:dependenciaId', verificarToken, async (req, res) => {
+  try {
+    const { dependenciaId } = req.params;
+    
+    console.log('Obteniendo totales por niveles para dependencia:', dependenciaId);
+    
+    // Query que suma las horas de cada nivel jerárquico para la dependencia
+    const [totales] = await pool.query(
+      `SELECT 
+        'DIRECTIVO' as nivel_jerarquico,
+        COALESCE(SUM(tp.horas_directivo), 0) as total_horas
+      FROM tiempos_procedimientos tp
+      INNER JOIN procedimientos pr ON tp.procedimiento_id = pr.id
+      INNER JOIN actividades ac ON pr.actividad_id = ac.id
+      INNER JOIN procesos p ON ac.proceso_id = p.id
+      WHERE p.dependencia_id = ? AND tp.activo = 1
+      
+      UNION ALL
+      
+      SELECT 
+        'ASESOR' as nivel_jerarquico,
+        COALESCE(SUM(tp.horas_asesor), 0) as total_horas
+      FROM tiempos_procedimientos tp
+      INNER JOIN procedimientos pr ON tp.procedimiento_id = pr.id
+      INNER JOIN actividades ac ON pr.actividad_id = ac.id
+      INNER JOIN procesos p ON ac.proceso_id = p.id
+      WHERE p.dependencia_id = ? AND tp.activo = 1
+      
+      UNION ALL
+      
+      SELECT 
+        'PROFESIONAL' as nivel_jerarquico,
+        COALESCE(SUM(tp.horas_profesional), 0) as total_horas
+      FROM tiempos_procedimientos tp
+      INNER JOIN procedimientos pr ON tp.procedimiento_id = pr.id
+      INNER JOIN actividades ac ON pr.actividad_id = ac.id
+      INNER JOIN procesos p ON ac.proceso_id = p.id
+      WHERE p.dependencia_id = ? AND tp.activo = 1
+      
+      UNION ALL
+      
+      SELECT 
+        'TECNICO' as nivel_jerarquico,
+        COALESCE(SUM(tp.horas_tecnico), 0) as total_horas
+      FROM tiempos_procedimientos tp
+      INNER JOIN procedimientos pr ON tp.procedimiento_id = pr.id
+      INNER JOIN actividades ac ON pr.actividad_id = ac.id
+      INNER JOIN procesos p ON ac.proceso_id = p.id
+      WHERE p.dependencia_id = ? AND tp.activo = 1
+      
+      UNION ALL
+      
+      SELECT 
+        'ASISTENCIAL' as nivel_jerarquico,
+        COALESCE(SUM(tp.horas_asistencial), 0) as total_horas
+      FROM tiempos_procedimientos tp
+      INNER JOIN procedimientos pr ON tp.procedimiento_id = pr.id
+      INNER JOIN actividades ac ON pr.actividad_id = ac.id
+      INNER JOIN procesos p ON ac.proceso_id = p.id
+      WHERE p.dependencia_id = ? AND tp.activo = 1
+      
+      UNION ALL
+      
+      SELECT 
+        'CONTRATISTA' as nivel_jerarquico,
+        COALESCE(SUM(tp.horas_contratista), 0) as total_horas
+      FROM tiempos_procedimientos tp
+      INNER JOIN procedimientos pr ON tp.procedimiento_id = pr.id
+      INNER JOIN actividades ac ON pr.actividad_id = ac.id
+      INNER JOIN procesos p ON ac.proceso_id = p.id
+      WHERE p.dependencia_id = ? AND tp.activo = 1
+      
+      UNION ALL
+      
+      SELECT 
+        'TRABAJADOR_OFICIAL' as nivel_jerarquico,
+        COALESCE(SUM(tp.horas_trabajador_oficial), 0) as total_horas
+      FROM tiempos_procedimientos tp
+      INNER JOIN procedimientos pr ON tp.procedimiento_id = pr.id
+      INNER JOIN actividades ac ON pr.actividad_id = ac.id
+      INNER JOIN procesos p ON ac.proceso_id = p.id
+      WHERE p.dependencia_id = ? AND tp.activo = 1`,
+      [dependenciaId, dependenciaId, dependenciaId, dependenciaId, dependenciaId, dependenciaId, dependenciaId]
+    );
+    
+    console.log('Totales por niveles encontrados:', totales.length);
+    
+    res.json({ success: true, data: totales });
+  } catch (error) {
+    console.error('Error al obtener totales por niveles:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Endpoint para obtener procedimientos con tiempos por dependencia
+app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', verificarToken, async (req, res) => {
+  try {
+    const { dependenciaId } = req.params;
+    
+    console.log('Obteniendo procedimientos con tiempos para dependencia:', dependenciaId);
+    
+    const [procedimientos] = await pool.query(
+      `SELECT 
+        pr.id,
+        pr.nombre,
+        pr.descripcion,
+        tp.frecuencia_mensual,
+        tp.tiempo_estandar,
+        tp.tiempo_minimo,
+        tp.tiempo_promedio,
+        tp.tiempo_maximo,
+        tp.horas_directivo,
+        tp.horas_asesor,
+        tp.horas_profesional,
+        tp.horas_tecnico,
+        tp.horas_asistencial,
+        tp.horas_contratista,
+        tp.horas_trabajador_oficial,
+        tp.observaciones,
+        p.id as proceso_id,
+        p.nombre as proceso_nombre,
+        p.descripcion as proceso_descripcion,
+        ac.id as actividad_id,
+        ac.nombre as actividad_nombre,
+        ac.descripcion as actividad_descripcion,
+        CONCAT(u.nombre, ' ', u.apellido) as usuario_registra,
+        tp.fecha_creacion as fecha_registro
+      FROM procedimientos pr
+      INNER JOIN actividades ac ON pr.actividad_id = ac.id
+      INNER JOIN procesos p ON ac.proceso_id = p.id
+      LEFT JOIN tiempos_procedimientos tp ON pr.id = tp.procedimiento_id AND tp.activo = 1
+      LEFT JOIN usuarios u ON tp.usuario_id = u.id
+      WHERE p.dependencia_id = ?
+      ORDER BY p.nombre, ac.nombre, pr.nombre`,
+      [dependenciaId]
+    );
+    
+    console.log('Procedimientos encontrados:', procedimientos.length);
+    
+    res.json({ success: true, data: procedimientos });
+  } catch (error) {
+    console.error('Error al obtener procedimientos por dependencia:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 app.get('/api/cargas/estadisticas', verificarToken, async (req, res) => {
   try {
     // Estadísticas generales
