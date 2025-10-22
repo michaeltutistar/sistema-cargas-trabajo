@@ -616,6 +616,94 @@ app.get('/api/empleos/:id', verificarToken, async (req, res) => {
 // CARGAS DE TRABAJO Y ANÁLISIS
 // ============================================================================
 
+// Endpoint para obtener tiempos de procedimientos
+app.get('/api/cargas/tiempos', verificarToken, async (req, res) => {
+  try {
+    const { procedimientoId, empleoId } = req.query;
+    let query = 'SELECT * FROM tiempos_procedimientos WHERE 1=1';
+    const params = [];
+    
+    if (procedimientoId) {
+      query += ' AND procedimiento_id = ?';
+      params.push(procedimientoId);
+    }
+    
+    if (empleoId) {
+      query += ' AND empleo_id = ?';
+      params.push(empleoId);
+    }
+    
+    query += ' ORDER BY fecha_registro DESC';
+    
+    const [tiempos] = await pool.query(query, params);
+    res.json({ success: true, data: tiempos });
+  } catch (error) {
+    console.error('Error al obtener tiempos:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Endpoint para crear tiempo de procedimiento
+app.post('/api/cargas/tiempos', verificarToken, async (req, res) => {
+  try {
+    const { 
+      procedimientoId, 
+      empleoId, 
+      estructuraId,
+      frecuenciaMensual, 
+      tiempoMinimo, 
+      tiempoPromedio, 
+      tiempoMaximo, 
+      observaciones 
+    } = req.body;
+    
+    console.log('Datos recibidos para crear tiempo:', req.body);
+    
+    // Validaciones
+    if (!procedimientoId || !empleoId) {
+      return res.status(400).json({ error: 'procedimientoId y empleoId son requeridos' });
+    }
+    
+    if (tiempoMinimo > tiempoPromedio || tiempoPromedio > tiempoMaximo) {
+      return res.status(400).json({ error: 'Los tiempos deben cumplir: mínimo ≤ promedio ≤ máximo' });
+    }
+    
+    // Calcular tiempo estándar PERT
+    const tiempoEstandar = calcularTiempoEstandarPERT(tiempoMinimo, tiempoPromedio, tiempoMaximo);
+    const totalHorasMes = frecuenciaMensual * tiempoEstandar;
+    
+    const [result] = await pool.query(
+      `INSERT INTO tiempos_procedimientos 
+       (procedimiento_id, empleo_id, usuario_id, frecuencia_mensual, tiempo_minimo, tiempo_promedio, tiempo_maximo, 
+        tiempo_estandar, total_horas_mes, fecha_registro, observaciones, estructura_id) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)`,
+      [
+        procedimientoId, 
+        empleoId, 
+        req.usuario.id, 
+        frecuenciaMensual, 
+        tiempoMinimo, 
+        tiempoPromedio, 
+        tiempoMaximo, 
+        tiempoEstandar.toFixed(3), 
+        totalHorasMes.toFixed(3), 
+        observaciones || '',
+        estructuraId || null
+      ]
+    );
+    
+    const [nuevoTiempo] = await pool.query(
+      'SELECT * FROM tiempos_procedimientos WHERE id = ?',
+      [result.insertId]
+    );
+    
+    res.status(201).json({ success: true, data: nuevoTiempo[0] });
+  } catch (error) {
+    console.error('Error al guardar tiempo:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 app.get('/api/cargas/estadisticas', verificarToken, async (req, res) => {
   try {
     // Estadísticas generales
