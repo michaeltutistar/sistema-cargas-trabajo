@@ -848,14 +848,13 @@ app.get('/api/cargas/tiempos/totales-por-niveles/:dependenciaId', verificarToken
     console.log('Obteniendo totales por niveles para dependencia:', dependenciaId);
     
     // Query que suma las horas de cada nivel jerárquico para la dependencia
+    // Usa proceso_id directo de tiempos_procedimientos
     const [totales] = await pool.query(
       `SELECT 
         'DIRECTIVO' as nivel_jerarquico,
         COALESCE(SUM(tp.horas_directivo), 0) as total_horas
       FROM tiempos_procedimientos tp
-      INNER JOIN procedimientos pr ON tp.procedimiento_id = pr.id
-      INNER JOIN actividades ac ON pr.actividad_id = ac.id
-      INNER JOIN procesos p ON ac.proceso_id = p.id
+      INNER JOIN procesos p ON tp.proceso_id = p.id
       WHERE p.dependencia_id = ? AND tp.activo = 1
       
       UNION ALL
@@ -864,9 +863,7 @@ app.get('/api/cargas/tiempos/totales-por-niveles/:dependenciaId', verificarToken
         'ASESOR' as nivel_jerarquico,
         COALESCE(SUM(tp.horas_asesor), 0) as total_horas
       FROM tiempos_procedimientos tp
-      INNER JOIN procedimientos pr ON tp.procedimiento_id = pr.id
-      INNER JOIN actividades ac ON pr.actividad_id = ac.id
-      INNER JOIN procesos p ON ac.proceso_id = p.id
+      INNER JOIN procesos p ON tp.proceso_id = p.id
       WHERE p.dependencia_id = ? AND tp.activo = 1
       
       UNION ALL
@@ -875,9 +872,7 @@ app.get('/api/cargas/tiempos/totales-por-niveles/:dependenciaId', verificarToken
         'PROFESIONAL' as nivel_jerarquico,
         COALESCE(SUM(tp.horas_profesional), 0) as total_horas
       FROM tiempos_procedimientos tp
-      INNER JOIN procedimientos pr ON tp.procedimiento_id = pr.id
-      INNER JOIN actividades ac ON pr.actividad_id = ac.id
-      INNER JOIN procesos p ON ac.proceso_id = p.id
+      INNER JOIN procesos p ON tp.proceso_id = p.id
       WHERE p.dependencia_id = ? AND tp.activo = 1
       
       UNION ALL
@@ -886,9 +881,7 @@ app.get('/api/cargas/tiempos/totales-por-niveles/:dependenciaId', verificarToken
         'TECNICO' as nivel_jerarquico,
         COALESCE(SUM(tp.horas_tecnico), 0) as total_horas
       FROM tiempos_procedimientos tp
-      INNER JOIN procedimientos pr ON tp.procedimiento_id = pr.id
-      INNER JOIN actividades ac ON pr.actividad_id = ac.id
-      INNER JOIN procesos p ON ac.proceso_id = p.id
+      INNER JOIN procesos p ON tp.proceso_id = p.id
       WHERE p.dependencia_id = ? AND tp.activo = 1
       
       UNION ALL
@@ -897,9 +890,7 @@ app.get('/api/cargas/tiempos/totales-por-niveles/:dependenciaId', verificarToken
         'ASISTENCIAL' as nivel_jerarquico,
         COALESCE(SUM(tp.horas_asistencial), 0) as total_horas
       FROM tiempos_procedimientos tp
-      INNER JOIN procedimientos pr ON tp.procedimiento_id = pr.id
-      INNER JOIN actividades ac ON pr.actividad_id = ac.id
-      INNER JOIN procesos p ON ac.proceso_id = p.id
+      INNER JOIN procesos p ON tp.proceso_id = p.id
       WHERE p.dependencia_id = ? AND tp.activo = 1
       
       UNION ALL
@@ -908,9 +899,7 @@ app.get('/api/cargas/tiempos/totales-por-niveles/:dependenciaId', verificarToken
         'CONTRATISTA' as nivel_jerarquico,
         COALESCE(SUM(tp.horas_contratista), 0) as total_horas
       FROM tiempos_procedimientos tp
-      INNER JOIN procedimientos pr ON tp.procedimiento_id = pr.id
-      INNER JOIN actividades ac ON pr.actividad_id = ac.id
-      INNER JOIN procesos p ON ac.proceso_id = p.id
+      INNER JOIN procesos p ON tp.proceso_id = p.id
       WHERE p.dependencia_id = ? AND tp.activo = 1
       
       UNION ALL
@@ -919,9 +908,7 @@ app.get('/api/cargas/tiempos/totales-por-niveles/:dependenciaId', verificarToken
         'TRABAJADOR_OFICIAL' as nivel_jerarquico,
         COALESCE(SUM(tp.horas_trabajador_oficial), 0) as total_horas
       FROM tiempos_procedimientos tp
-      INNER JOIN procedimientos pr ON tp.procedimiento_id = pr.id
-      INNER JOIN actividades ac ON pr.actividad_id = ac.id
-      INNER JOIN procesos p ON ac.proceso_id = p.id
+      INNER JOIN procesos p ON tp.proceso_id = p.id
       WHERE p.dependencia_id = ? AND tp.activo = 1`,
       [dependenciaId, dependenciaId, dependenciaId, dependenciaId, dependenciaId, dependenciaId, dependenciaId]
     );
@@ -942,8 +929,10 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
     
     console.log('Obteniendo procedimientos con tiempos para dependencia:', dependenciaId);
     
+    // Buscar procedimientos que tengan tiempos registrados y estén asociados a la dependencia
+    // Los tiempos tienen proceso_id y actividad_id directos
     const [procedimientos] = await pool.query(
-      `SELECT 
+      `SELECT DISTINCT
         pr.id,
         pr.nombre,
         pr.descripcion,
@@ -968,12 +957,12 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
         ac.descripcion as actividad_descripcion,
         CONCAT(u.nombre, ' ', u.apellido) as usuario_registra,
         tp.fecha_creacion as fecha_registro
-      FROM procedimientos pr
-      INNER JOIN actividades ac ON pr.actividad_id = ac.id
-      INNER JOIN procesos p ON ac.proceso_id = p.id
-      LEFT JOIN tiempos_procedimientos tp ON pr.id = tp.procedimiento_id AND tp.activo = 1
+      FROM tiempos_procedimientos tp
+      INNER JOIN procedimientos pr ON tp.procedimiento_id = pr.id
+      INNER JOIN procesos p ON tp.proceso_id = p.id
+      INNER JOIN actividades ac ON tp.actividad_id = ac.id
       LEFT JOIN usuarios u ON tp.usuario_id = u.id
-      WHERE p.dependencia_id = ?
+      WHERE tp.activo = 1 AND p.dependencia_id = ?
       ORDER BY p.nombre, ac.nombre, pr.nombre`,
       [dependenciaId]
     );
