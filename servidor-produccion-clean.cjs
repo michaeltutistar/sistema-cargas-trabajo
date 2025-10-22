@@ -423,6 +423,198 @@ app.get('/api/cargas/estadisticas', verificarToken, async (req, res) => {
 });
 
 // ============================================================================
+// ESTRUCTURAS
+// ============================================================================
+
+// Listar estructuras activas
+app.get('/api/estructura', verificarToken, async (req, res) => {
+  try {
+    const [estructuras] = await pool.query(
+      'SELECT * FROM estructuras WHERE activa = TRUE ORDER BY created_at DESC'
+    );
+    res.json({ success: true, data: estructuras });
+  } catch (error) {
+    console.error('Error al listar estructuras:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Obtener estructura por ID
+app.get('/api/estructura/:id', verificarToken, async (req, res) => {
+  try {
+    const [estructuras] = await pool.query(
+      'SELECT * FROM estructuras WHERE id = ?',
+      [req.params.id]
+    );
+    
+    if (estructuras.length === 0) {
+      return res.status(404).json({ error: 'Estructura no encontrada' });
+    }
+    
+    res.json({ success: true, data: estructuras[0] });
+  } catch (error) {
+    console.error('Error al obtener estructura:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Crear estructura
+app.post('/api/estructura', verificarToken, async (req, res) => {
+  try {
+    const { nombre, descripcion } = req.body;
+    
+    if (!nombre) {
+      return res.status(400).json({ error: 'El nombre es requerido' });
+    }
+    
+    const [result] = await pool.query(
+      'INSERT INTO estructuras (nombre, descripcion, usuario_creador_id) VALUES (?, ?, ?)',
+      [nombre, descripcion || '', req.usuario.id]
+    );
+    
+    const [nuevaEstructura] = await pool.query(
+      'SELECT * FROM estructuras WHERE id = ?',
+      [result.insertId]
+    );
+    
+    res.status(201).json({ success: true, data: nuevaEstructura[0] });
+  } catch (error) {
+    console.error('Error al crear estructura:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Actualizar estructura
+app.put('/api/estructura/:id', verificarToken, async (req, res) => {
+  try {
+    const { nombre, descripcion } = req.body;
+    
+    await pool.query(
+      'UPDATE estructuras SET nombre = ?, descripcion = ? WHERE id = ?',
+      [nombre, descripcion, req.params.id]
+    );
+    
+    const [estructura] = await pool.query(
+      'SELECT * FROM estructuras WHERE id = ?',
+      [req.params.id]
+    );
+    
+    res.json({ success: true, data: estructura[0] });
+  } catch (error) {
+    console.error('Error al actualizar estructura:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Desactivar estructura
+app.delete('/api/estructura/:id/desactivar', verificarToken, async (req, res) => {
+  try {
+    await pool.query(
+      'UPDATE estructuras SET activa = FALSE WHERE id = ?',
+      [req.params.id]
+    );
+    res.json({ success: true, message: 'Estructura desactivada' });
+  } catch (error) {
+    console.error('Error al desactivar estructura:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Activar estructura
+app.put('/api/estructura/:id/activar', verificarToken, async (req, res) => {
+  try {
+    await pool.query(
+      'UPDATE estructuras SET activa = TRUE WHERE id = ?',
+      [req.params.id]
+    );
+    res.json({ success: true, message: 'Estructura activada' });
+  } catch (error) {
+    console.error('Error al activar estructura:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Obtener estructura completa con elementos
+app.get('/api/estructura/:id/completa', verificarToken, async (req, res) => {
+  try {
+    const [estructura] = await pool.query(
+      'SELECT * FROM estructuras WHERE id = ?',
+      [req.params.id]
+    );
+    
+    if (estructura.length === 0) {
+      return res.status(404).json({ error: 'Estructura no encontrada' });
+    }
+    
+    const [elementos] = await pool.query(
+      'SELECT * FROM estructuras_elementos WHERE estructura_id = ? ORDER BY tipo, orden',
+      [req.params.id]
+    );
+    
+    res.json({
+      success: true,
+      data: {
+        ...estructura[0],
+        elementos: elementos
+      }
+    });
+  } catch (error) {
+    console.error('Error al obtener estructura completa:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Agregar elemento a estructura
+app.post('/api/estructura/elemento', verificarToken, async (req, res) => {
+  try {
+    const { estructuraId, tipo, referenciaId, orden } = req.body;
+    
+    const [result] = await pool.query(
+      'INSERT INTO estructuras_elementos (estructura_id, tipo, referencia_id, orden) VALUES (?, ?, ?, ?)',
+      [estructuraId, tipo, referenciaId, orden || 0]
+    );
+    
+    const [elemento] = await pool.query(
+      'SELECT * FROM estructuras_elementos WHERE id = ?',
+      [result.insertId]
+    );
+    
+    res.status(201).json({ success: true, data: elemento[0] });
+  } catch (error) {
+    console.error('Error al agregar elemento:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Eliminar elemento de estructura
+app.delete('/api/estructura/elemento/:id', verificarToken, async (req, res) => {
+  try {
+    await pool.query(
+      'DELETE FROM estructuras_elementos WHERE id = ?',
+      [req.params.id]
+    );
+    res.json({ success: true, message: 'Elemento eliminado' });
+  } catch (error) {
+    console.error('Error al eliminar elemento:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Obtener elementos por tipo
+app.get('/api/estructura/:id/elementos/:tipo', verificarToken, async (req, res) => {
+  try {
+    const [elementos] = await pool.query(
+      'SELECT * FROM estructuras_elementos WHERE estructura_id = ? AND tipo = ? ORDER BY orden',
+      [req.params.id, req.params.tipo]
+    );
+    res.json({ success: true, data: elementos });
+  } catch (error) {
+    console.error('Error al obtener elementos:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// ============================================================================
 // FRONTEND - SPA ROUTING
 // ============================================================================
 
