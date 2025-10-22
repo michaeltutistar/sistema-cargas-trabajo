@@ -785,11 +785,15 @@ app.get('/api/estructura/:id/completa', verificarToken, async (req, res) => {
 // Agregar elemento a estructura
 app.post('/api/estructura/elemento', verificarToken, async (req, res) => {
   try {
-    const { estructuraId, tipo, referenciaId, orden } = req.body;
+    const { estructuraId, tipo, elementoId, padreId, orden } = req.body;
+    
+    if (!estructuraId || !tipo || !elementoId) {
+      return res.status(400).json({ error: 'estructuraId, tipo y elementoId son requeridos' });
+    }
     
     const [result] = await pool.query(
-      'INSERT INTO elementos_estructura (estructura_id, tipo, referencia_id, orden) VALUES (?, ?, ?, ?)',
-      [estructuraId, tipo, referenciaId, orden || 0]
+      'INSERT INTO elementos_estructura (estructura_id, tipo, elemento_id, padre_id, orden) VALUES (?, ?, ?, ?, ?)',
+      [estructuraId, tipo, elementoId, padreId || null, orden || 0]
     );
     
     const [elemento] = await pool.query(
