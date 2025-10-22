@@ -547,7 +547,7 @@ app.get('/api/estructura/:id/completa', verificarToken, async (req, res) => {
     }
     
     const [elementos] = await pool.query(
-      'SELECT * FROM estructuras_elementos WHERE estructura_id = ? ORDER BY tipo, orden',
+      'SELECT * FROM elementos_estructura WHERE estructura_id = ? ORDER BY tipo, orden',
       [req.params.id]
     );
     
@@ -570,12 +570,12 @@ app.post('/api/estructura/elemento', verificarToken, async (req, res) => {
     const { estructuraId, tipo, referenciaId, orden } = req.body;
     
     const [result] = await pool.query(
-      'INSERT INTO estructuras_elementos (estructura_id, tipo, referencia_id, orden) VALUES (?, ?, ?, ?)',
+      'INSERT INTO elementos_estructura (estructura_id, tipo, referencia_id, orden) VALUES (?, ?, ?, ?)',
       [estructuraId, tipo, referenciaId, orden || 0]
     );
     
     const [elemento] = await pool.query(
-      'SELECT * FROM estructuras_elementos WHERE id = ?',
+      'SELECT * FROM elementos_estructura WHERE id = ?',
       [result.insertId]
     );
     
@@ -590,7 +590,7 @@ app.post('/api/estructura/elemento', verificarToken, async (req, res) => {
 app.delete('/api/estructura/elemento/:id', verificarToken, async (req, res) => {
   try {
     await pool.query(
-      'DELETE FROM estructuras_elementos WHERE id = ?',
+      'DELETE FROM elementos_estructura WHERE id = ?',
       [req.params.id]
     );
     res.json({ success: true, message: 'Elemento eliminado' });
@@ -604,7 +604,7 @@ app.delete('/api/estructura/elemento/:id', verificarToken, async (req, res) => {
 app.get('/api/estructura/:id/elementos/:tipo', verificarToken, async (req, res) => {
   try {
     const [elementos] = await pool.query(
-      'SELECT * FROM estructuras_elementos WHERE estructura_id = ? AND tipo = ? ORDER BY orden',
+      'SELECT * FROM elementos_estructura WHERE estructura_id = ? AND tipo = ? ORDER BY orden',
       [req.params.id, req.params.tipo]
     );
     res.json({ success: true, data: elementos });
