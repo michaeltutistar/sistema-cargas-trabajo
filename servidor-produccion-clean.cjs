@@ -413,8 +413,13 @@ app.get('/api/cargas/estadisticas', verificarToken, async (req, res) => {
 // ============================================================================
 
 // Para todas las rutas no-API, servir index.html (SPA routing)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(distPath, 'index.html'));
+app.use((req, res, next) => {
+  // Si la ruta no es de API, servir el index.html del SPA
+  if (!req.path.startsWith('/api')) {
+    res.sendFile(path.join(distPath, 'index.html'));
+  } else {
+    next();
+  }
 });
 
 // ============================================================================
