@@ -165,8 +165,8 @@ app.post('/api/auth/login', async (req, res) => {
         apellido: usuario.apellido,
         rol: usuario.rol || 'usuario',
         activo: usuario.activo,
-        fechaCreacion: usuario.created_at,
-        fechaActualizacion: usuario.updated_at
+        fechaCreacion: usuario.fecha_creacion,
+        fechaActualizacion: usuario.fecha_actualizacion
       }
     });
   } catch (error) {
@@ -178,7 +178,7 @@ app.post('/api/auth/login', async (req, res) => {
 app.get('/api/auth/profile', verificarToken, async (req, res) => {
   try {
     const [usuarios] = await pool.query(
-      'SELECT id, email, nombre, apellido, rol, activo, created_at as fechaCreacion, updated_at as fechaActualizacion FROM usuarios WHERE id = ? AND activo = TRUE',
+      'SELECT id, email, nombre, apellido, rol, activo, fecha_creacion, fecha_actualizacion FROM usuarios WHERE id = ? AND activo = TRUE',
       [req.usuario.id]
     );
 
@@ -194,8 +194,8 @@ app.get('/api/auth/profile', verificarToken, async (req, res) => {
       apellido: usuario.apellido,
       rol: usuario.rol || 'usuario',
       activo: usuario.activo,
-      fechaCreacion: usuario.fechaCreacion,
-      fechaActualizacion: usuario.fechaActualizacion
+      fechaCreacion: usuario.fecha_creacion,
+      fechaActualizacion: usuario.fecha_actualizacion
     });
   } catch (error) {
     console.error('Error al obtener perfil:', error);
@@ -430,7 +430,7 @@ app.get('/api/cargas/estadisticas', verificarToken, async (req, res) => {
 app.get('/api/estructura', verificarToken, async (req, res) => {
   try {
     const [estructuras] = await pool.query(
-      'SELECT * FROM estructuras WHERE activa = TRUE ORDER BY created_at DESC'
+      'SELECT * FROM estructuras WHERE activa = TRUE ORDER BY fecha_creacion DESC'
     );
     res.json({ success: true, data: estructuras });
   } catch (error) {
