@@ -278,11 +278,6 @@ const IngresoTiempos: React.FC = () => {
         console.log('✅ Dependencias cargadas:', depData.length, 'elementos');
         console.log('✅ Empleos cargados:', empData.length, 'elementos');
         
-        if (depData.length === 0) {
-          console.warn('⚠️ No se encontraron dependencias');
-          setError('No se encontraron dependencias en la base de datos. Verifica que el servidor tenga datos.');
-        }
-        
       } catch (err) {
         console.error('❌ Error al cargar datos iniciales:', err);
         const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
