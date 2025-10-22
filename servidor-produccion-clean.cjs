@@ -549,30 +549,34 @@ app.get('/api/estructura/:id/completa', verificarToken, async (req, res) => {
     // Obtener todos los elementos con sus datos completos usando UNION
     const [elementos] = await pool.query(
       `
-      (SELECT ee.id, ee.estructura_id, ee.tipo, ee.elemento_id as referenciaId, 
-              ee.padre_id as padreId, ee.orden, ee.activo, ee.fecha_creacion, ee.fecha_actualizacion,
-              d.id as relacionId, d.nombre, d.descripcion, d.activa
+      (SELECT ee.id, ee.estructura_id as estructuraId, ee.tipo, ee.elemento_id as elementoId, 
+              ee.padre_id as padreId, ee.orden, ee.activo, ee.fecha_creacion as fechaCreacion, 
+              ee.fecha_actualizacion as fechaActualizacion,
+              d.nombre as nombreReal, d.descripcion, d.activa
        FROM elementos_estructura ee
        LEFT JOIN dependencias d ON ee.elemento_id = d.id AND ee.tipo = 'dependencia'
        WHERE ee.estructura_id = ? AND ee.tipo = 'dependencia')
       UNION ALL
-      (SELECT ee.id, ee.estructura_id, ee.tipo, ee.elemento_id as referenciaId,
-              ee.padre_id as padreId, ee.orden, ee.activo, ee.fecha_creacion, ee.fecha_actualizacion,
-              p.id as relacionId, p.nombre, p.descripcion, p.activo as activa
+      (SELECT ee.id, ee.estructura_id as estructuraId, ee.tipo, ee.elemento_id as elementoId,
+              ee.padre_id as padreId, ee.orden, ee.activo, ee.fecha_creacion as fechaCreacion,
+              ee.fecha_actualizacion as fechaActualizacion,
+              p.nombre as nombreReal, p.descripcion, p.activo as activa
        FROM elementos_estructura ee
        LEFT JOIN procesos p ON ee.elemento_id = p.id AND ee.tipo = 'proceso'
        WHERE ee.estructura_id = ? AND ee.tipo = 'proceso')
       UNION ALL
-      (SELECT ee.id, ee.estructura_id, ee.tipo, ee.elemento_id as referenciaId,
-              ee.padre_id as padreId, ee.orden, ee.activo, ee.fecha_creacion, ee.fecha_actualizacion,
-              a.id as relacionId, a.nombre, a.descripcion, a.activa
+      (SELECT ee.id, ee.estructura_id as estructuraId, ee.tipo, ee.elemento_id as elementoId,
+              ee.padre_id as padreId, ee.orden, ee.activo, ee.fecha_creacion as fechaCreacion,
+              ee.fecha_actualizacion as fechaActualizacion,
+              a.nombre as nombreReal, a.descripcion, a.activa
        FROM elementos_estructura ee
        LEFT JOIN actividades a ON ee.elemento_id = a.id AND ee.tipo = 'actividad'
        WHERE ee.estructura_id = ? AND ee.tipo = 'actividad')
       UNION ALL
-      (SELECT ee.id, ee.estructura_id, ee.tipo, ee.elemento_id as referenciaId,
-              ee.padre_id as padreId, ee.orden, ee.activo, ee.fecha_creacion, ee.fecha_actualizacion,
-              pr.id as relacionId, pr.nombre, pr.descripcion, pr.activo as activa
+      (SELECT ee.id, ee.estructura_id as estructuraId, ee.tipo, ee.elemento_id as elementoId,
+              ee.padre_id as padreId, ee.orden, ee.activo, ee.fecha_creacion as fechaCreacion,
+              ee.fecha_actualizacion as fechaActualizacion,
+              pr.nombre as nombreReal, pr.descripcion, pr.activo as activa
        FROM elementos_estructura ee
        LEFT JOIN procedimientos pr ON ee.elemento_id = pr.id AND ee.tipo = 'procedimiento'
        WHERE ee.estructura_id = ? AND ee.tipo = 'procedimiento')
