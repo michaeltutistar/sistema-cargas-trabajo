@@ -149,7 +149,8 @@ app.post('/api/auth/login', async (req, res) => {
         id: usuario.id, 
         email: usuario.email,
         nombre: usuario.nombre,
-        apellido: usuario.apellido
+        apellido: usuario.apellido,
+        rol: usuario.rol || 'usuario'
       },
       JWT_SECRET,
       { expiresIn: '24h' }
@@ -162,7 +163,10 @@ app.post('/api/auth/login', async (req, res) => {
         email: usuario.email,
         nombre: usuario.nombre,
         apellido: usuario.apellido,
-        cargo: usuario.cargo
+        rol: usuario.rol || 'usuario',
+        activo: usuario.activo,
+        fechaCreacion: usuario.created_at,
+        fechaActualizacion: usuario.updated_at
       }
     });
   } catch (error) {
@@ -174,7 +178,7 @@ app.post('/api/auth/login', async (req, res) => {
 app.get('/api/auth/profile', verificarToken, async (req, res) => {
   try {
     const [usuarios] = await pool.query(
-      'SELECT id, email, nombre, apellido, cargo FROM usuarios WHERE id = ? AND activo = TRUE',
+      'SELECT id, email, nombre, apellido, rol, activo, created_at as fechaCreacion, updated_at as fechaActualizacion FROM usuarios WHERE id = ? AND activo = TRUE',
       [req.usuario.id]
     );
 
@@ -182,7 +186,17 @@ app.get('/api/auth/profile', verificarToken, async (req, res) => {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    res.json(usuarios[0]);
+    const usuario = usuarios[0];
+    res.json({
+      id: usuario.id,
+      email: usuario.email,
+      nombre: usuario.nombre,
+      apellido: usuario.apellido,
+      rol: usuario.rol || 'usuario',
+      activo: usuario.activo,
+      fechaCreacion: usuario.fechaCreacion,
+      fechaActualizacion: usuario.fechaActualizacion
+    });
   } catch (error) {
     console.error('Error al obtener perfil:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
