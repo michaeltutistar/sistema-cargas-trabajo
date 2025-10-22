@@ -600,16 +600,78 @@ app.delete('/api/estructura/elemento/:id', verificarToken, async (req, res) => {
   }
 });
 
-// Obtener elementos por tipo
+// Obtener elementos por tipo con datos completos
 app.get('/api/estructura/:id/elementos/:tipo', verificarToken, async (req, res) => {
   try {
-    const [elementos] = await pool.query(
-      'SELECT * FROM elementos_estructura WHERE estructura_id = ? AND tipo = ? ORDER BY orden',
-      [req.params.id, req.params.tipo]
-    );
+    const { id, tipo } = req.params;
+    let query = '';
+    
+    switch(tipo) {
+      case 'dependencia':
+        query = `
+          SELECT ee.*, d.nombre, d.descripcion, d.activa
+          FROM elementos_estructura ee
+          LEFT JOIN dependencias d ON ee.referencia_id = d.id
+          WHERE ee.estructura_id = ? AND ee.tipo = ?
+          ORDER BY ee.orden
+        `;
+        break;
+      case 'proceso':
+        query = `
+          SELECT ee.*, p.nombre, p.descripcion, p.dependencia_id, p.activo
+          FROM elementos_estructura ee
+          LEFT JOIN procesos p ON ee.referencia_id = p.id
+          WHERE ee.estructura_id = ? AND ee.tipo = ?
+          ORDER BY ee.orden
+        `;
+        break;
+      case 'actividad':
+        query = `
+          SELECT ee.*, a.nombre, a.descripcion, a.proceso_id, a.activa
+          FROM elementos_estructura ee
+          LEFT JOIN actividades a ON ee.referencia_id = a.id
+          WHERE ee.estructura_id = ? AND ee.tipo = ?
+          ORDER BY ee.orden
+        `;
+        break;
+      case 'procedimiento':
+        query = `
+          SELECT ee.*, pr.nombre, pr.descripcion, pr.actividad_id, pr.activo
+          FROM elementos_estructura ee
+          LEFT JOIN procedimientos pr ON ee.referencia_id = pr.id
+          WHERE ee.estructura_id = ? AND ee.tipo = ?
+          ORDER BY ee.orden
+        `;
+        break;
+      default:
+        query = `
+          SELECT * FROM elementos_estructura
+          WHERE estructura_id = ? AND tipo = ?
+          ORDER BY orden
+        `;
+    }
+    
+    const [elementos] = await pool.query(query, [id, tipo]);
     res.json({ success: true, data: elementos });
   } catch (error) {
     console.error('Error al obtener elementos:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Obtener dependencias por estructura
+app.get('/api/estructura/:id/dependencias', verificarToken, async (req, res) => {
+  try {
+    const [dependencias] = await pool.query(
+      `SELECT d.* FROM dependencias d
+       INNER JOIN elementos_estructura ee ON d.id = ee.referencia_id
+       WHERE ee.estructura_id = ? AND ee.tipo = 'dependencia'
+       ORDER BY ee.orden`,
+      [req.params.id]
+    );
+    res.json({ success: true, data: dependencias });
+  } catch (error) {
+    console.error('Error al obtener dependencias por estructura:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
