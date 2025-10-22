@@ -721,6 +721,125 @@ app.post('/api/cargas/tiempos', verificarToken, async (req, res) => {
   }
 });
 
+// Endpoint para finalizar registro de múltiples tiempos
+app.post('/api/cargas/tiempos/finalizar-registro', verificarToken, async (req, res) => {
+  try {
+    const { tiempos } = req.body;
+    
+    if (!tiempos || !Array.isArray(tiempos)) {
+      return res.status(400).json({ error: 'Se requiere un array de tiempos' });
+    }
+    
+    console.log(`Finalizando registro de ${tiempos.length} tiempos`);
+    
+    const tiemposProcesados = [];
+    const erroresDetalle = [];
+    
+    for (let i = 0; i < tiempos.length; i++) {
+      try {
+        const tiempo = tiempos[i];
+        const { 
+          procedimientoId, 
+          empleoId, 
+          estructuraId,
+          frecuenciaMensual, 
+          tiempoMinimo, 
+          tiempoPromedio, 
+          tiempoMaximo, 
+          observaciones 
+        } = tiempo;
+        
+        // Validaciones
+        if (!procedimientoId || !empleoId) {
+          erroresDetalle.push({
+            indice: i,
+            error: 'procedimientoId y empleoId son requeridos',
+            datos: tiempo
+          });
+          continue;
+        }
+        
+        if (tiempoMinimo > tiempoPromedio || tiempoPromedio > tiempoMaximo) {
+          erroresDetalle.push({
+            indice: i,
+            error: 'Los tiempos deben cumplir: mínimo ≤ promedio ≤ máximo',
+            datos: tiempo
+          });
+          continue;
+        }
+        
+        // Calcular tiempo estándar PERT
+        const tiempoEstandar = calcularTiempoEstandarPERT(tiempoMinimo, tiempoPromedio, tiempoMaximo);
+        const totalHoras = frecuenciaMensual * tiempoEstandar;
+        
+        // Obtener el nivel jerárquico del empleo
+        const [empleos] = await pool.query('SELECT nivel_jerarquico FROM empleos WHERE id = ?', [empleoId]);
+        const nivelJerarquico = empleos.length > 0 ? empleos[0].nivel_jerarquico : null;
+        
+        const columnasHoras = {
+          'DIRECTIVO': 'horas_directivo',
+          'ASESOR': 'horas_asesor',
+          'PROFESIONAL': 'horas_profesional',
+          'TECNICO': 'horas_tecnico',
+          'ASISTENCIAL': 'horas_asistencial',
+          'CONTRATISTA': 'horas_contratista',
+          'TRABAJADOR_OFICIAL': 'horas_trabajador_oficial'
+        };
+        
+        const columnaHoras = columnasHoras[nivelJerarquico] || 'horas_profesional';
+        
+        const [result] = await pool.query(
+          `INSERT INTO tiempos_procedimientos 
+           (procedimiento_id, empleo_id, usuario_id, frecuencia_mensual, tiempo_minimo, tiempo_promedio, tiempo_maximo, 
+            tiempo_estandar, ${columnaHoras}, observaciones, estructura_id) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            procedimientoId, 
+            empleoId, 
+            req.usuario.id, 
+            frecuenciaMensual, 
+            tiempoMinimo, 
+            tiempoPromedio, 
+            tiempoMaximo, 
+            tiempoEstandar.toFixed(3), 
+            totalHoras.toFixed(3), 
+            observaciones || '',
+            estructuraId || null
+          ]
+        );
+        
+        const [nuevoTiempo] = await pool.query(
+          'SELECT * FROM tiempos_procedimientos WHERE id = ?',
+          [result.insertId]
+        );
+        
+        tiemposProcesados.push(nuevoTiempo[0]);
+      } catch (error) {
+        console.error(`Error procesando tiempo ${i}:`, error);
+        erroresDetalle.push({
+          indice: i,
+          error: error.message,
+          datos: tiempos[i]
+        });
+      }
+    }
+    
+    res.status(201).json({ 
+      success: true, 
+      data: {
+        totalProcesados: tiempos.length,
+        exitosos: tiemposProcesados.length,
+        errores: erroresDetalle.length,
+        tiemposProcesados: tiemposProcesados,
+        erroresDetalle: erroresDetalle
+      }
+    });
+  } catch (error) {
+    console.error('Error al finalizar registro de tiempos:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 app.get('/api/cargas/estadisticas', verificarToken, async (req, res) => {
   try {
     // Estadísticas generales
