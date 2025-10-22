@@ -237,6 +237,52 @@ app.get('/api/dependencias/:id', verificarToken, async (req, res) => {
   }
 });
 
+app.post('/api/dependencias', verificarToken, async (req, res) => {
+  try {
+    const { nombre, descripcion } = req.body;
+    
+    if (!nombre) {
+      return res.status(400).json({ error: 'El nombre es requerido' });
+    }
+    
+    const [result] = await pool.query(
+      'INSERT INTO dependencias (nombre, descripcion) VALUES (?, ?)',
+      [nombre, descripcion || '']
+    );
+    
+    const [nuevaDependencia] = await pool.query(
+      'SELECT * FROM dependencias WHERE id = ?',
+      [result.insertId]
+    );
+    
+    res.status(201).json({ success: true, data: nuevaDependencia[0] });
+  } catch (error) {
+    console.error('Error al crear dependencia:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+app.put('/api/dependencias/:id', verificarToken, async (req, res) => {
+  try {
+    const { nombre, descripcion } = req.body;
+    
+    await pool.query(
+      'UPDATE dependencias SET nombre = ?, descripcion = ? WHERE id = ?',
+      [nombre, descripcion, req.params.id]
+    );
+    
+    const [dependencia] = await pool.query(
+      'SELECT * FROM dependencias WHERE id = ?',
+      [req.params.id]
+    );
+    
+    res.json({ success: true, data: dependencia[0] });
+  } catch (error) {
+    console.error('Error al actualizar dependencia:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 // ============================================================================
 // PROCESOS
 // ============================================================================
@@ -262,6 +308,52 @@ app.get('/api/procesos', verificarToken, async (req, res) => {
   }
 });
 
+app.post('/api/procesos', verificarToken, async (req, res) => {
+  try {
+    const { nombre, descripcion, dependenciaId, orden } = req.body;
+    
+    if (!nombre) {
+      return res.status(400).json({ error: 'El nombre es requerido' });
+    }
+    
+    const [result] = await pool.query(
+      'INSERT INTO procesos (nombre, descripcion, dependencia_id, orden) VALUES (?, ?, ?, ?)',
+      [nombre, descripcion || '', dependenciaId, orden || 0]
+    );
+    
+    const [nuevoProceso] = await pool.query(
+      'SELECT * FROM procesos WHERE id = ?',
+      [result.insertId]
+    );
+    
+    res.status(201).json({ success: true, data: nuevoProceso[0] });
+  } catch (error) {
+    console.error('Error al crear proceso:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+app.put('/api/procesos/:id', verificarToken, async (req, res) => {
+  try {
+    const { nombre, descripcion, dependenciaId } = req.body;
+    
+    await pool.query(
+      'UPDATE procesos SET nombre = ?, descripcion = ?, dependencia_id = ? WHERE id = ?',
+      [nombre, descripcion, dependenciaId, req.params.id]
+    );
+    
+    const [proceso] = await pool.query(
+      'SELECT * FROM procesos WHERE id = ?',
+      [req.params.id]
+    );
+    
+    res.json({ success: true, data: proceso[0] });
+  } catch (error) {
+    console.error('Error al actualizar proceso:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 // ============================================================================
 // ACTIVIDADES
 // ============================================================================
@@ -283,6 +375,52 @@ app.get('/api/actividades', verificarToken, async (req, res) => {
     res.json(actividades);
   } catch (error) {
     console.error('Error al obtener actividades:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+app.post('/api/actividades', verificarToken, async (req, res) => {
+  try {
+    const { nombre, descripcion, procesoId, orden } = req.body;
+    
+    if (!nombre) {
+      return res.status(400).json({ error: 'El nombre es requerido' });
+    }
+    
+    const [result] = await pool.query(
+      'INSERT INTO actividades (nombre, descripcion, proceso_id, orden) VALUES (?, ?, ?, ?)',
+      [nombre, descripcion || '', procesoId, orden || 0]
+    );
+    
+    const [nuevaActividad] = await pool.query(
+      'SELECT * FROM actividades WHERE id = ?',
+      [result.insertId]
+    );
+    
+    res.status(201).json({ success: true, data: nuevaActividad[0] });
+  } catch (error) {
+    console.error('Error al crear actividad:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+app.put('/api/actividades/:id', verificarToken, async (req, res) => {
+  try {
+    const { nombre, descripcion, procesoId } = req.body;
+    
+    await pool.query(
+      'UPDATE actividades SET nombre = ?, descripcion = ?, proceso_id = ? WHERE id = ?',
+      [nombre, descripcion, procesoId, req.params.id]
+    );
+    
+    const [actividad] = await pool.query(
+      'SELECT * FROM actividades WHERE id = ?',
+      [req.params.id]
+    );
+    
+    res.json({ success: true, data: actividad[0] });
+  } catch (error) {
+    console.error('Error al actualizar actividad:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
@@ -331,6 +469,52 @@ app.get('/api/procedimientos/:id', verificarToken, async (req, res) => {
     res.json(procedimientos[0]);
   } catch (error) {
     console.error('Error al obtener procedimiento:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+app.post('/api/procedimientos', verificarToken, async (req, res) => {
+  try {
+    const { nombre, descripcion, actividadId, orden } = req.body;
+    
+    if (!nombre) {
+      return res.status(400).json({ error: 'El nombre es requerido' });
+    }
+    
+    const [result] = await pool.query(
+      'INSERT INTO procedimientos (nombre, descripcion, actividad_id, orden) VALUES (?, ?, ?, ?)',
+      [nombre, descripcion || '', actividadId, orden || 0]
+    );
+    
+    const [nuevoProcedimiento] = await pool.query(
+      'SELECT * FROM procedimientos WHERE id = ?',
+      [result.insertId]
+    );
+    
+    res.status(201).json({ success: true, data: nuevoProcedimiento[0] });
+  } catch (error) {
+    console.error('Error al crear procedimiento:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+app.put('/api/procedimientos/:id', verificarToken, async (req, res) => {
+  try {
+    const { nombre, descripcion, actividadId } = req.body;
+    
+    await pool.query(
+      'UPDATE procedimientos SET nombre = ?, descripcion = ?, actividad_id = ? WHERE id = ?',
+      [nombre, descripcion, actividadId, req.params.id]
+    );
+    
+    const [procedimiento] = await pool.query(
+      'SELECT * FROM procedimientos WHERE id = ?',
+      [req.params.id]
+    );
+    
+    res.json({ success: true, data: procedimiento[0] });
+  } catch (error) {
+    console.error('Error al actualizar procedimiento:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
