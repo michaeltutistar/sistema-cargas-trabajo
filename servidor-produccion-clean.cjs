@@ -791,14 +791,18 @@ app.post('/api/estructura/elemento', verificarToken, async (req, res) => {
       return res.status(400).json({ error: 'estructuraId, tipo y elementoId son requeridos' });
     }
     
-    const [result] = await pool.query(
-      'INSERT INTO elementos_estructura (estructura_id, tipo, elemento_id, padre_id, orden) VALUES (?, ?, ?, ?, ?)',
-      [estructuraId, tipo, elementoId, padreId || null, orden || 0]
+    // Generar UUID para el id
+    const crypto = require('crypto');
+    const nuevoId = crypto.randomUUID();
+    
+    await pool.query(
+      'INSERT INTO elementos_estructura (id, estructura_id, tipo, elemento_id, padre_id, orden) VALUES (?, ?, ?, ?, ?, ?)',
+      [nuevoId, estructuraId, tipo, elementoId, padreId || null, orden || 0]
     );
     
     const [elemento] = await pool.query(
       'SELECT * FROM elementos_estructura WHERE id = ?',
-      [result.insertId]
+      [nuevoId]
     );
     
     res.status(201).json({ success: true, data: elemento[0] });
