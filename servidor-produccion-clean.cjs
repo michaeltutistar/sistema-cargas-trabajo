@@ -204,6 +204,245 @@ app.get('/api/auth/profile', verificarToken, async (req, res) => {
 });
 
 // ============================================================================
+// GESTIÓN DE USUARIOS (solo admin)
+// ============================================================================
+
+// Middleware para verificar rol de administrador
+const verificarAdmin = (req, res, next) => {
+  if (req.usuario.rol !== 'admin') {
+    return res.status(403).json({ error: 'Acceso denegado. Se requiere rol de administrador.' });
+  }
+  next();
+};
+
+// Obtener lista de usuarios con paginación
+app.get('/api/usuarios', verificarToken, verificarAdmin, async (req, res) => {
+  try {
+    const pagina = parseInt(req.query.pagina) || 1;
+    const limite = parseInt(req.query.limite) || 100;
+    const offset = (pagina - 1) * limite;
+    
+    // Filtros opcionales
+    const { busqueda, rol, estado } = req.query;
+    
+    let whereConditions = [];
+    let params = [];
+    
+    if (busqueda) {
+      whereConditions.push('(nombre LIKE ? OR apellido LIKE ? OR email LIKE ?)');
+      const searchTerm = `%${busqueda}%`;
+      params.push(searchTerm, searchTerm, searchTerm);
+    }
+    
+    if (rol && rol !== 'todos') {
+      whereConditions.push('rol = ?');
+      params.push(rol);
+    }
+    
+    if (estado && estado !== 'todos') {
+      whereConditions.push('activo = ?');
+      params.push(estado === 'activo' ? 1 : 0);
+    }
+    
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+    
+    // Contar total de usuarios
+    const [[{ total }]] = await pool.query(
+      `SELECT COUNT(*) as total FROM usuarios ${whereClause}`,
+      params
+    );
+    
+    // Obtener usuarios paginados
+    const [usuarios] = await pool.query(
+      `SELECT id, email, nombre, apellido, rol, activo, fecha_creacion, fecha_actualizacion 
+       FROM usuarios 
+       ${whereClause}
+       ORDER BY fecha_creacion DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limite, offset]
+    );
+    
+    res.json({
+      datos: {
+        usuarios: usuarios,
+        total: total,
+        pagina: pagina,
+        limite: limite,
+        totalPaginas: Math.ceil(total / limite)
+      }
+    });
+  } catch (error) {
+    console.error('Error al obtener usuarios:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Crear nuevo usuario
+app.post('/api/usuarios', verificarToken, verificarAdmin, async (req, res) => {
+  try {
+    const { email, password, nombre, apellido, rol } = req.body;
+    
+    // Validaciones
+    if (!email || !password || !nombre || !apellido || !rol) {
+      return res.status(400).json({ error: 'Todos los campos son requeridos' });
+    }
+    
+    // Verificar si el email ya existe
+    const [[existente]] = await pool.query(
+      'SELECT id FROM usuarios WHERE email = ?',
+      [email]
+    );
+    
+    if (existente) {
+      return res.status(400).json({ error: 'El email ya está registrado' });
+    }
+    
+    // Hashear contraseña
+    const passwordHash = await bcrypt.hash(password, 10);
+    
+    // Generar UUID
+    const userId = crypto.randomUUID();
+    
+    // Insertar usuario
+    await pool.query(
+      `INSERT INTO usuarios (id, email, password, nombre, apellido, rol, activo) 
+       VALUES (?, ?, ?, ?, ?, ?, 1)`,
+      [userId, email, passwordHash, nombre, apellido, rol]
+    );
+    
+    // Obtener el usuario creado
+    const [usuarios] = await pool.query(
+      'SELECT id, email, nombre, apellido, rol, activo, fecha_creacion, fecha_actualizacion FROM usuarios WHERE id = ?',
+      [userId]
+    );
+    
+    res.status(201).json({ success: true, data: usuarios[0] });
+  } catch (error) {
+    console.error('Error al crear usuario:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Actualizar usuario
+app.put('/api/usuarios/:id', verificarToken, verificarAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { email, nombre, apellido, rol, activo } = req.body;
+    
+    // Validaciones
+    if (!email || !nombre || !apellido || !rol) {
+      return res.status(400).json({ error: 'Todos los campos son requeridos excepto la contraseña' });
+    }
+    
+    // Verificar si el email ya existe en otro usuario
+    const [[existente]] = await pool.query(
+      'SELECT id FROM usuarios WHERE email = ? AND id != ?',
+      [email, id]
+    );
+    
+    if (existente) {
+      return res.status(400).json({ error: 'El email ya está registrado en otro usuario' });
+    }
+    
+    // Actualizar usuario
+    await pool.query(
+      `UPDATE usuarios 
+       SET email = ?, nombre = ?, apellido = ?, rol = ?, activo = ?
+       WHERE id = ?`,
+      [email, nombre, apellido, rol, activo !== undefined ? activo : 1, id]
+    );
+    
+    // Obtener el usuario actualizado
+    const [usuarios] = await pool.query(
+      'SELECT id, email, nombre, apellido, rol, activo, fecha_creacion, fecha_actualizacion FROM usuarios WHERE id = ?',
+      [id]
+    );
+    
+    if (usuarios.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    
+    res.json({ success: true, data: usuarios[0] });
+  } catch (error) {
+    console.error('Error al actualizar usuario:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Cambiar contraseña de usuario
+app.put('/api/usuarios/:id/password', verificarToken, verificarAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { password } = req.body;
+    
+    if (!password || password.length < 6) {
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
+    }
+    
+    // Hashear nueva contraseña
+    const passwordHash = await bcrypt.hash(password, 10);
+    
+    // Actualizar contraseña
+    await pool.query(
+      'UPDATE usuarios SET password = ? WHERE id = ?',
+      [passwordHash, id]
+    );
+    
+    res.json({ success: true, message: 'Contraseña actualizada correctamente' });
+  } catch (error) {
+    console.error('Error al cambiar contraseña:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Eliminar usuario (soft delete)
+app.delete('/api/usuarios/:id', verificarToken, verificarAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // No permitir eliminar al usuario actual
+    if (id === req.usuario.id) {
+      return res.status(400).json({ error: 'No puedes eliminar tu propio usuario' });
+    }
+    
+    // Desactivar usuario (soft delete)
+    await pool.query(
+      'UPDATE usuarios SET activo = 0 WHERE id = ?',
+      [id]
+    );
+    
+    res.json({ success: true, message: 'Usuario eliminado correctamente' });
+  } catch (error) {
+    console.error('Error al eliminar usuario:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Estadísticas de usuarios
+app.get('/api/usuarios/stats/estadisticas', verificarToken, verificarAdmin, async (req, res) => {
+  try {
+    const [[{ totalUsuarios }]] = await pool.query('SELECT COUNT(*) as totalUsuarios FROM usuarios WHERE activo = 1');
+    const [[{ totalInactivos }]] = await pool.query('SELECT COUNT(*) as totalInactivos FROM usuarios WHERE activo = 0');
+    
+    const [porRol] = await pool.query(`
+      SELECT rol, COUNT(*) as cantidad 
+      FROM usuarios 
+      WHERE activo = 1 
+      GROUP BY rol
+    `);
+    
+    res.json({
+      totalUsuarios,
+      totalInactivos,
+      porRol
+    });
+  } catch (error) {
+    console.error('Error al obtener estadísticas de usuarios:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// ============================================================================
 // DEPENDENCIAS
 // ============================================================================
 
