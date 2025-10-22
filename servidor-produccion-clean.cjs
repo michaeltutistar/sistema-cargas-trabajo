@@ -580,6 +580,37 @@ app.get('/api/empleos', verificarToken, async (req, res) => {
   }
 });
 
+app.get('/api/empleos/nivel/:nivel', verificarToken, async (req, res) => {
+  try {
+    const [empleos] = await pool.query(
+      'SELECT * FROM empleos WHERE nivel_jerarquico = ? ORDER BY grado',
+      [req.params.nivel]
+    );
+    res.json(empleos);
+  } catch (error) {
+    console.error('Error al obtener empleos por nivel:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+app.get('/api/empleos/:id', verificarToken, async (req, res) => {
+  try {
+    const [empleos] = await pool.query(
+      'SELECT * FROM empleos WHERE id = ?',
+      [req.params.id]
+    );
+    
+    if (empleos.length === 0) {
+      return res.status(404).json({ error: 'Empleo no encontrado' });
+    }
+    
+    res.json(empleos[0]);
+  } catch (error) {
+    console.error('Error al obtener empleo:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 // ============================================================================
 // CARGAS DE TRABAJO Y ANÁLISIS
 // ============================================================================
