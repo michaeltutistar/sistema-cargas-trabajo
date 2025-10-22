@@ -573,7 +573,7 @@ app.post('/api/procedimientos/tiempos', verificarToken, async (req, res) => {
 app.get('/api/empleos', verificarToken, async (req, res) => {
   try {
     const [empleos] = await pool.query('SELECT * FROM empleos ORDER BY grado');
-    res.json(empleos);
+    res.json({ success: true, data: empleos });
   } catch (error) {
     console.error('Error al obtener empleos:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
@@ -586,7 +586,8 @@ app.get('/api/empleos/nivel/:nivel', verificarToken, async (req, res) => {
       'SELECT * FROM empleos WHERE nivel_jerarquico = ? ORDER BY grado',
       [req.params.nivel]
     );
-    res.json(empleos);
+    console.log(`Empleos encontrados para nivel ${req.params.nivel}:`, empleos.length);
+    res.json({ success: true, data: empleos });
   } catch (error) {
     console.error('Error al obtener empleos por nivel:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
@@ -604,7 +605,7 @@ app.get('/api/empleos/:id', verificarToken, async (req, res) => {
       return res.status(404).json({ error: 'Empleo no encontrado' });
     }
     
-    res.json(empleos[0]);
+    res.json({ success: true, data: empleos[0] });
   } catch (error) {
     console.error('Error al obtener empleo:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
