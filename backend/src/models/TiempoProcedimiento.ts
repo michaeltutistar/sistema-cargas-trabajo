@@ -1310,7 +1310,7 @@ export class TiempoProcedimientoModel extends BaseModel<TiempoProcedimiento> {
           tp.horas_profesional,
           tp.horas_tecnico,
           tp.horas_asistencial,
-          tp.grado,
+          COALESCE(tp.grado, NULL) as grado,
           tp.horas_contratista,
           tp.horas_trabajador_oficial,
           tp.observaciones,
@@ -1357,7 +1357,20 @@ export class TiempoProcedimientoModel extends BaseModel<TiempoProcedimiento> {
         console.log(`[DEBUG GRADO] Tipo de grado:`, typeof primerResultado.grado);
       }
       
-      return resultados as any[];
+      // Asegurar que el campo grado esté presente en todos los resultados
+      // MySQL2 puede omitir campos NULL, así que los agregamos explícitamente
+      const resultadosConGrado = (resultados as any[]).map((row: any) => {
+        // Si no tiene el campo grado, intentar obtenerlo del query original o dejarlo como null
+        if (!('grado' in row)) {
+          console.log(`[WARNING] Resultado sin campo grado, ID: ${row.id}`);
+          // Intentar obtener el grado desde la base de datos si no está presente
+          // Por ahora, simplemente asegurarnos de que el campo exista
+          row.grado = null;
+        }
+        return row;
+      });
+      
+      return resultadosConGrado;
     } catch (error) {
       console.error('Error obteniendo procedimientos por dependencia:', error);
       throw error;
