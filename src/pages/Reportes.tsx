@@ -54,6 +54,7 @@ interface ProcedimientoReporte {
   horas_profesional: string | number;
   horas_tecnico: string | number;
   horas_asistencial: string | number;
+  grado?: number;
   horas_contratista: string | number;
   horas_trabajador_oficial: string | number;
   observaciones?: string;
@@ -290,6 +291,7 @@ const Reportes: React.FC = () => {
         'Horas Profesional': parseFloat(String(proc.horas_profesional)) || 0,
         'Horas Técnico': parseFloat(String(proc.horas_tecnico)) || 0,
         'Horas Asistencial': parseFloat(String(proc.horas_asistencial)) || 0,
+        'Grado': proc.grado || '',
         'Horas Contratista': parseFloat(String(proc.horas_contratista)) || 0,
         'Horas Trabajador Oficial': parseFloat(String(proc.horas_trabajador_oficial)) || 0,
         'Observaciones': proc.observaciones || '',
@@ -343,6 +345,7 @@ const Reportes: React.FC = () => {
         'Horas Profesional': totalesHoras.profesional,
         'Horas Técnico': totalesHoras.tecnico,
         'Horas Asistencial': totalesHoras.asistencial,
+        'Grado': '',
         'Horas Contratista': totalesHoras.contratista,
         'Horas Trabajador Oficial': totalesHoras.trabajadorOficial,
         'Observaciones': '',
@@ -365,6 +368,7 @@ const Reportes: React.FC = () => {
         'Horas Profesional': personalRequerido.profesional,
         'Horas Técnico': personalRequerido.tecnico,
         'Horas Asistencial': personalRequerido.asistencial,
+        'Grado': '',
         'Horas Contratista': personalRequerido.contratista,
         'Horas Trabajador Oficial': personalRequerido.trabajadorOficial,
         'Observaciones': '',
@@ -390,6 +394,7 @@ const Reportes: React.FC = () => {
         { wch: 15 }, // Horas Profesional
         { wch: 15 }, // Horas Técnico
         { wch: 15 }, // Horas Asistencial
+        { wch: 12 }, // Grado
         { wch: 15 }, // Horas Contratista
         { wch: 15 }, // Horas Trabajador Oficial
         { wch: 30 }, // Observaciones
@@ -674,6 +679,7 @@ const ReporteContent: React.FC<{ data: ReporteData }> = ({ data }) => {
                   <th className="border border-gray-300 px-3 py-2 text-center text-sm font-medium">Profesional</th>
                   <th className="border border-gray-300 px-3 py-2 text-center text-sm font-medium">Técnico</th>
                   <th className="border border-gray-300 px-3 py-2 text-center text-sm font-medium">Asistencial</th>
+                  <th className="border border-gray-300 px-3 py-2 text-center text-sm font-medium">Grado</th>
                   <th className="border border-gray-300 px-3 py-2 text-center text-sm font-medium">Contratista</th>
                   <th className="border border-gray-300 px-3 py-2 text-center text-sm font-medium">Trabajador oficial</th>
                   <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Observaciones</th>
@@ -697,6 +703,7 @@ const ReporteContent: React.FC<{ data: ReporteData }> = ({ data }) => {
                     <td className="border border-gray-300 px-3 py-2 text-sm text-center">{(parseFloat(String(proc.horas_profesional)) || 0).toFixed(2)}</td>
                     <td className="border border-gray-300 px-3 py-2 text-sm text-center">{(parseFloat(String(proc.horas_tecnico)) || 0).toFixed(2)}</td>
                     <td className="border border-gray-300 px-3 py-2 text-sm text-center">{(parseFloat(String(proc.horas_asistencial)) || 0).toFixed(2)}</td>
+                    <td className="border border-gray-300 px-3 py-2 text-sm text-center">{proc.grado ? proc.grado.toString().padStart(2, '0') : '-'}</td>
                     <td className="border border-gray-300 px-3 py-2 text-sm text-center">{(parseFloat(String(proc.horas_contratista)) || 0).toFixed(2)}</td>
                     <td className="border border-gray-300 px-3 py-2 text-sm text-center">{(parseFloat(String(proc.horas_trabajador_oficial)) || 0).toFixed(2)}</td>
                     <td className="border border-gray-300 px-3 py-2 text-sm">{proc.observaciones || '-'}</td>
@@ -724,6 +731,7 @@ const ReporteContent: React.FC<{ data: ReporteData }> = ({ data }) => {
                   <td className="border border-gray-300 px-3 py-2 text-sm text-center font-bold text-blue-700">
                     {totalesHoras.asistencial.toFixed(2)}
                   </td>
+                  <td className="border border-gray-300 px-3 py-2 text-sm"></td>
                   <td className="border border-gray-300 px-3 py-2 text-sm text-center font-bold text-blue-700">
                     {totalesHoras.contratista.toFixed(2)}
                   </td>
@@ -752,6 +760,7 @@ const ReporteContent: React.FC<{ data: ReporteData }> = ({ data }) => {
                   <td className="border border-gray-300 px-3 py-2 text-sm text-center font-bold text-green-700">
                     {personalRequerido.asistencial}
                   </td>
+                  <td className="border border-gray-300 px-3 py-2 text-sm"></td>
                   <td className="border border-gray-300 px-3 py-2 text-sm text-center font-bold text-green-700">
                     {personalRequerido.contratista}
                   </td>

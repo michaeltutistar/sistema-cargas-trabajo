@@ -1310,6 +1310,7 @@ export class TiempoProcedimientoModel extends BaseModel<TiempoProcedimiento> {
           tp.horas_profesional,
           tp.horas_tecnico,
           tp.horas_asistencial,
+          tp.grado,
           tp.horas_contratista,
           tp.horas_trabajador_oficial,
           tp.observaciones,
