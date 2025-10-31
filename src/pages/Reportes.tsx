@@ -182,11 +182,22 @@ const Reportes: React.FC = () => {
           });
         }
 
-        // Combinar procedimientos de todas las dependencias
+        // Combinar procedimientos de todas las dependencias, evitando duplicados por tiempo_id
         const procedimientosCombinados: ProcedimientoReporte[] = [];
+        const tiemposVistos = new Set<number>(); // Usar Set para rastrear tiempos ya agregados
+        
         for (const procedimientosResponse of procedimientosResponses) {
           const procedimientosData = (procedimientosResponse as any).datos || procedimientosResponse.data || [];
-          procedimientosCombinados.push(...procedimientosData);
+          
+          for (const proc of procedimientosData) {
+            // Usar tiempo_id si existe, o generar un ID único basado en procedimiento_id y otros campos
+            const tiempoId = proc.tiempo_id || proc.id || `${proc.procedimiento_id}_${proc.proceso_id}_${proc.actividad_id}_${proc.empleo_id || ''}`;
+            
+            if (!tiemposVistos.has(tiempoId)) {
+              tiemposVistos.add(tiempoId);
+              procedimientosCombinados.push(proc);
+            }
+          }
         }
 
         const reporteData: ReporteData = {
