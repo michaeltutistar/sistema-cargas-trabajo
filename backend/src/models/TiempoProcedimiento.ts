@@ -1347,6 +1347,15 @@ export class TiempoProcedimientoModel extends BaseModel<TiempoProcedimiento> {
       
       console.log(`🔍 Procedimientos encontrados para dependencia ${dependenciaId} en estructura ${estructuraId}:`, resultados);
       
+      // Log para debug: verificar si el campo grado está presente
+      if (Array.isArray(resultados) && resultados.length > 0) {
+        const primerResultado = resultados[0] as any;
+        console.log(`🔍 Primer resultado completo:`, primerResultado);
+        console.log(`🔍 Primer resultado tiene grado?:`, 'grado' in primerResultado);
+        console.log(`🔍 Valor de grado del primer resultado:`, primerResultado.grado);
+        console.log(`🔍 Keys del primer resultado:`, Object.keys(primerResultado));
+      }
+      
       return resultados as any[];
     } catch (error) {
       console.error('Error obteniendo procedimientos por dependencia:', error);
