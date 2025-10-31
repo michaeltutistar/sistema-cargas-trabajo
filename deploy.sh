@@ -1,22 +1,76 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Uso: ./deploy.sh [branch]
+# Uso: ./deploy.sh [branch] [--skip-backup]
 # Variables opcionales:
 #   PM2_APP (por defecto: cargas-trabajo)
 #   ECOSYSTEM (por defecto: ecosystem.config.js)
+#   SKIP_BACKUP (si se pasa --skip-backup, no hace backup)
 
 BRANCH="${1:-main}"
+SKIP_BACKUP=false
+
+# Verificar si se pasó --skip-backup
+if [[ "${*}" == *"--skip-backup"* ]]; then
+  SKIP_BACKUP=true
+fi
+
 PM2_APP="${PM2_APP:-cargas-trabajo}"
 ECOSYSTEM="${ECOSYSTEM:-ecosystem.config.js}"
 
 has_cmd() { command -v "$1" >/dev/null 2>&1; }
 
+echo "🚀 ============================================="
+echo "🚀 INICIANDO PROCESO DE DESPLIEGUE"
+echo "🚀 ============================================="
 echo "==> Directorio: $(pwd)"
+echo "==> Branch: ${BRANCH}"
+echo ""
 
 if ! has_cmd git; then
   echo "[ERROR] git no está instalado." >&2
   exit 1
+fi
+
+# 0) BACKUP ANTES DE DESPLEGAR
+if [ "${SKIP_BACKUP}" = false ]; then
+  echo "💾 ============================================="
+  echo "💾 CREANDO BACKUP ANTES DEL DESPLIEGUE"
+  echo "💾 ============================================="
+  
+  # Backup de base de datos
+  if [ -f "backend/database/backup_mysql.sh" ]; then
+    echo "==> Creando backup de base de datos..."
+    if bash backend/database/backup_mysql.sh backup; then
+      echo "✅ Backup de base de datos creado exitosamente"
+    else
+      echo "⚠️  [ADVERTENCIA] No se pudo crear backup de base de datos, pero continuamos..."
+    fi
+  else
+    echo "⚠️  [ADVERTENCIA] Script de backup no encontrado, saltando backup de BD..."
+  fi
+  
+  # Backup del código actual (snapshot del estado antes del deploy)
+  echo "==> Creando snapshot del código actual..."
+  SNAPSHOT_DIR="/var/backup/cargas-trabajo/snapshots"
+  mkdir -p "${SNAPSHOT_DIR}"
+  SNAPSHOT_DATE=$(date +%Y%m%d_%H%M%S)
+  SNAPSHOT_NAME="snapshot_pre_deploy_${SNAPSHOT_DATE}"
+  
+  if git status --porcelain | grep -q .; then
+    echo "⚠️  [ADVERTENCIA] Hay cambios sin commitear, guardándolos en snapshot..."
+    git stash save "snapshot_pre_deploy_${SNAPSHOT_DATE}"
+  fi
+  
+  CURRENT_COMMIT=$(git rev-parse HEAD)
+  echo "${CURRENT_COMMIT}" > "${SNAPSHOT_DIR}/${SNAPSHOT_NAME}.txt"
+  echo "✅ Snapshot guardado: ${SNAPSHOT_NAME} (commit: ${CURRENT_COMMIT})"
+  
+  echo "💾 ============================================="
+  echo ""
+else
+  echo "⚠️  Saltando backup (--skip-backup activado)"
+  echo ""
 fi
 
 # 1) Actualizar código
@@ -83,4 +137,26 @@ else
   echo "[INFO] Nginx/systemctl no disponible. Saltando recarga de Nginx"
 fi
 
-echo "✅ Despliegue completado con éxito" 
+echo ""
+echo "✅ ============================================="
+echo "✅ DESPLIEGUE COMPLETADO CON ÉXITO"
+echo "✅ ============================================="
+echo ""
+if [ "${SKIP_BACKUP}" = false ]; then
+  echo "💾 BACKUPS CREADOS:"
+  echo "   - Base de datos: /var/backup/cargas-trabajo/"
+  echo "   - Snapshot código: /var/backup/cargas-trabajo/snapshots/"
+  echo ""
+  echo "🔧 COMANDOS ÚTILES:"
+  echo "   Ver backups BD: backend/database/backup_mysql.sh list"
+  echo "   Restaurar BD: backend/database/backup_mysql.sh restore <archivo>"
+  echo "   Ver último commit antes del deploy: cat /var/backup/cargas-trabajo/snapshots/snapshot_pre_deploy_*.txt"
+  echo ""
+fi
+echo "📊 Estado de la aplicación:"
+pm2 list | grep "${PM2_APP}" || echo "   (usar 'pm2 list' para ver detalles)"
+echo ""
+echo "📝 Logs recientes:"
+pm2 logs "${PM2_APP}" --lines 10 --nostream || echo "   (usar 'pm2 logs ${PM2_APP}' para ver logs completos)"
+echo ""
+echo "✅ =============================================" 
