@@ -230,7 +230,28 @@ const Reportes: React.FC = () => {
 
       // Manejar ambas estructuras de respuesta (data y datos)
       const totalesData = (totalesResponse as any).datos || totalesResponse.data || [];
-      const procedimientosData = (procedimientosResponse as any).datos || procedimientosResponse.data || [];
+      
+      // Extraer procedimientos correctamente
+      let procedimientosData = [];
+      if ((procedimientosResponse as any).datos) {
+        procedimientosData = (procedimientosResponse as any).datos;
+      } else if ((procedimientosResponse as any).data) {
+        procedimientosData = (procedimientosResponse as any).data;
+      } else if (Array.isArray(procedimientosResponse)) {
+        procedimientosData = procedimientosResponse;
+      }
+      
+      // Log detallado para debug
+      console.log('🔍 DEBUG Procedimientos:', {
+        responseType: typeof procedimientosResponse,
+        hasDatos: !!(procedimientosResponse as any).datos,
+        hasData: !!(procedimientosResponse as any).data,
+        isArray: Array.isArray(procedimientosResponse),
+        dataLength: procedimientosData?.length,
+        firstItem: procedimientosData?.[0],
+        firstItemGrado: procedimientosData?.[0]?.grado,
+        firstItemKeys: procedimientosData?.[0] ? Object.keys(procedimientosData[0]) : []
+      });
       
       console.log('🔍 Totales data procesados:', totalesData);
       console.log('🔍 Procedimientos data procesados:', procedimientosData);
