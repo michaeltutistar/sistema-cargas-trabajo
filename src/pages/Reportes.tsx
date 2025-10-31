@@ -209,9 +209,9 @@ const Reportes: React.FC = () => {
         const tiemposVistos = new Map<string | number, any>(); // Usar Map para mantener el primer elemento
         
         let totalAntesDedup = 0;
+        let totalAgregados = 0;
+        let totalDuplicados = 0;
         
-        // Primero procesar los tiempos sin dependencia (estos no deberían estar duplicados)
-        // y luego procesar los tiempos de cada dependencia
         console.log(`📊 Total de respuestas de procedimientos: ${procedimientosResponses.length}`);
         
         for (let i = 0; i < procedimientosResponses.length; i++) {
@@ -233,9 +233,11 @@ const Reportes: React.FC = () => {
             if (!tiemposVistos.has(tiempoId)) {
               tiemposVistos.set(tiempoId, proc);
               procedimientosCombinados.push(proc);
+              totalAgregados++;
             } else {
               // Log para debug si encontramos un duplicado
               const existente = tiemposVistos.get(tiempoId);
+              totalDuplicados++;
               console.log('⚠️ Duplicado detectado y omitido:', {
                 tiempoId,
                 nuevo: {
@@ -259,8 +261,26 @@ const Reportes: React.FC = () => {
           }
         }
         
-        console.log(`📊 Deduplicación: ${totalAntesDedup} items antes, ${procedimientosCombinados.length} después`);
-        console.log(`📊 Tiempos únicos por tiempo_id:`, Array.from(tiemposVistos.keys()));
+        console.log(`📊 Deduplicación completa:`);
+        console.log(`   - Total items antes: ${totalAntesDedup}`);
+        console.log(`   - Total agregados: ${totalAgregados}`);
+        console.log(`   - Total duplicados omitidos: ${totalDuplicados}`);
+        console.log(`   - Total final: ${procedimientosCombinados.length}`);
+        console.log(`📊 Tiempos únicos por tiempo_id:`, Array.from(tiemposVistos.keys()).slice(0, 20), `... (total: ${tiemposVistos.size})`);
+        
+        // Verificar si hay tiempos sin dependencia que se perdieron
+        if (tiemposSinDependenciaData && tiemposSinDependenciaData.length > 0) {
+          const tiemposSinDepIds = tiemposSinDependenciaData.map(t => String(t.tiempo_id || t.id || 'unknown'));
+          const tiemposEnFinal = procedimientosCombinados.map(t => String(t.tiempo_id || t.id || 'unknown'));
+          const tiemposPerdidos = tiemposSinDepIds.filter(id => !tiemposEnFinal.includes(id));
+          
+          if (tiemposPerdidos.length > 0) {
+            console.warn(`⚠️ Tiempos sin dependencia que se perdieron en deduplicación:`, tiemposPerdidos);
+            console.warn(`⚠️ Estos tiempos deberían aparecer pero no están en el resultado final`);
+          } else {
+            console.log(`✅ Todos los tiempos sin dependencia están en el resultado final`);
+          }
+        }
 
         const reporteData: ReporteData = {
           estructura,
