@@ -184,34 +184,49 @@ const Reportes: React.FC = () => {
 
         // Combinar procedimientos de todas las dependencias, evitando duplicados por tiempo_id
         const procedimientosCombinados: ProcedimientoReporte[] = [];
-        const tiemposVistos = new Set<string | number>(); // Usar Set para rastrear tiempos ya agregados
+        const tiemposVistos = new Map<string | number, any>(); // Usar Map para mantener el primer elemento
+        
+        let totalAntesDedup = 0;
         
         for (const procedimientosResponse of procedimientosResponses) {
           const procedimientosData = (procedimientosResponse as any).datos || procedimientosResponse.data || [];
+          totalAntesDedup += procedimientosData.length;
           
           for (const proc of procedimientosData) {
-            // Usar tiempo_id si existe, o generar un ID único basado en procedimiento_id y otros campos
-            // Convertir a string para comparación consistente
+            // Usar tiempo_id si existe (es el campo más confiable), o generar un ID único
             const tiempoId = proc.tiempo_id 
               ? String(proc.tiempo_id)
               : proc.id 
                 ? String(proc.id)
                 : `${proc.procedimiento_id || ''}_${proc.proceso_id || ''}_${proc.actividad_id || ''}_${proc.empleo_id || ''}_${proc.frecuencia_mensual || ''}_${proc.tiempo_estandar || ''}`;
             
+            // Si no existe, agregarlo. Si existe, mantener el primero (ya agregado)
             if (!tiemposVistos.has(tiempoId)) {
-              tiemposVistos.add(tiempoId);
+              tiemposVistos.set(tiempoId, proc);
               procedimientosCombinados.push(proc);
             } else {
               // Log para debug si encontramos un duplicado
+              const existente = tiemposVistos.get(tiempoId);
               console.log('⚠️ Duplicado detectado y omitido:', {
                 tiempoId,
-                procedimiento: proc.nombre,
-                procedimiento_id: proc.procedimiento_id,
-                proceso_id: proc.proceso_id
+                nuevo: {
+                  procedimiento: proc.nombre,
+                  procedimiento_id: proc.procedimiento_id,
+                  proceso_id: proc.proceso_id,
+                  actividad_id: proc.actividad_id
+                },
+                existente: {
+                  procedimiento: existente?.nombre,
+                  procedimiento_id: existente?.procedimiento_id,
+                  proceso_id: existente?.proceso_id,
+                  actividad_id: existente?.actividad_id
+                }
               });
             }
           }
         }
+        
+        console.log(`📊 Deduplicación: ${totalAntesDedup} items antes, ${procedimientosCombinados.length} después`);
 
         const reporteData: ReporteData = {
           estructura,
