@@ -234,6 +234,14 @@ const Reportes: React.FC = () => {
       
       console.log('🔍 Totales data procesados:', totalesData);
       console.log('🔍 Procedimientos data procesados:', procedimientosData);
+      console.log('🔍 Primer procedimiento completo:', procedimientosData[0]);
+      console.log('🔍 Primer procedimiento grado:', procedimientosData[0]?.grado);
+      console.log('🔍 Tipos de respuesta:', {
+        totalesTieneDatos: !!(totalesResponse as any).datos,
+        totalesTieneData: !!(totalesResponse as any).data,
+        procedimientosTieneDatos: !!(procedimientosResponse as any).datos,
+        procedimientosTieneData: !!(procedimientosResponse as any).data
+      });
 
       const reporteData: ReporteData = {
         estructura,
