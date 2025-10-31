@@ -1288,10 +1288,10 @@ app.get('/api/cargas/tiempos/procedimientos-sin-dependencia/:estructuraId', veri
         tp.horas_contratista,
         tp.horas_trabajador_oficial,
         tp.observaciones,
-        NULL as proceso_id,
+        tp.proceso_id,
         NULL as proceso_nombre,
         NULL as proceso_descripcion,
-        NULL as actividad_id,
+        tp.actividad_id,
         NULL as actividad_nombre,
         NULL as actividad_descripcion,
         COALESCE(CONCAT(u.nombre, ' ', u.apellido), u.email) as usuario_registra,
@@ -1300,15 +1300,20 @@ app.get('/api/cargas/tiempos/procedimientos-sin-dependencia/:estructuraId', veri
       INNER JOIN procedimientos pr ON tp.procedimiento_id = pr.id
       LEFT JOIN empleos e ON tp.empleo_id = e.id
       LEFT JOIN usuarios u ON tp.usuario_id = u.id
+      LEFT JOIN procesos p ON tp.proceso_id = p.id
+      LEFT JOIN actividades ac_fallback ON pr.actividad_id = ac_fallback.id
+      LEFT JOIN procesos pr_fallback ON ac_fallback.proceso_id = pr_fallback.id
       WHERE tp.activo = 1 
         AND tp.estructura_id = ?
+        -- Tiempos que no tienen proceso/actividad asignado y no tienen dependencia asociada
         AND tp.proceso_id IS NULL
-        AND NOT EXISTS (
-          SELECT 1 FROM actividades ac_fallback
-          INNER JOIN procesos pr_fallback ON ac_fallback.proceso_id = pr_fallback.id
-          WHERE ac_fallback.id = pr.actividad_id
-          AND pr_fallback.dependencia_id IS NOT NULL
+        AND (
+          -- O no tienen actividad de fallback
+          ac_fallback.id IS NULL
+          -- O la actividad de fallback no tiene proceso con dependencia
+          OR pr_fallback.dependencia_id IS NULL
         )
+        -- Verificar que el procedimiento esté en la estructura
         AND EXISTS (
           SELECT 1 FROM elementos_estructura ee_proc 
           WHERE ee_proc.elemento_id = pr.id 
