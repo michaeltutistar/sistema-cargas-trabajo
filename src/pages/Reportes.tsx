@@ -42,6 +42,7 @@ interface DependenciaReporte {
 
 interface ProcedimientoReporte {
   id: string;
+  tiempo_id?: number; // ID del registro en tiempos_procedimientos
   nombre: string;
   descripcion?: string;
   frecuencia_mensual: string | number;
@@ -174,12 +175,13 @@ const Reportes: React.FC = () => {
         // Obtener tiempos sin proceso/actividad directamente de la estructura
         // Estos tiempos no aparecen en las consultas por dependencia específica
         // pero sí deben aparecer en el reporte de "todas las dependencias"
+        let tiemposSinDependenciaData: ProcedimientoReporte[] = [];
         try {
           console.log(`🔍 Obteniendo tiempos sin dependencia para estructura: ${estructuraSeleccionada}`);
           const tiemposSinDependencia = await apiService.getProcedimientosSinDependencia(estructuraSeleccionada);
           console.log(`🔍 Respuesta tiempos sin dependencia:`, tiemposSinDependencia);
           
-          const tiemposSinDependenciaData = (tiemposSinDependencia as any).datos || tiemposSinDependencia.data || [];
+          tiemposSinDependenciaData = (tiemposSinDependencia as any).datos || tiemposSinDependencia.data || [];
           console.log(`🔍 Datos extraídos de tiempos sin dependencia:`, tiemposSinDependenciaData);
           console.log(`🔍 Cantidad de tiempos sin dependencia:`, tiemposSinDependenciaData.length);
           
@@ -279,7 +281,7 @@ const Reportes: React.FC = () => {
         
         // Verificar si hay tiempos sin dependencia que se perdieron
         if (tiemposSinDependenciaData && tiemposSinDependenciaData.length > 0) {
-          const tiemposSinDepIds = tiemposSinDependenciaData.map(t => String(t.tiempo_id || t.id || 'unknown'));
+          const tiemposSinDepIds = tiemposSinDependenciaData.map(t => String((t as any).tiempo_id || t.id || 'unknown'));
           const tiemposEnFinal = procedimientosCombinados.map(t => String(t.tiempo_id || t.id || 'unknown'));
           const tiemposPerdidos = tiemposSinDepIds.filter(id => !tiemposEnFinal.includes(id));
           
