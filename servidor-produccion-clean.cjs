@@ -1186,8 +1186,10 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
     console.log(`Estructura ID para dependencia ${dependenciaId}: ${estructuraId}`);
     
     // Buscar procedimientos que tengan tiempos registrados y estén asociados a la dependencia y estructura
+    // Usamos GROUP BY para evitar duplicados causados por múltiples JOINs
     const [procedimientos] = await pool.query(
-      `SELECT DISTINCT
+      `SELECT 
+        tp.id as tiempo_id,
         pr.id,
         pr.nombre,
         pr.descripcion,
@@ -1206,16 +1208,18 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
         tp.horas_trabajador_oficial,
         tp.observaciones,
         COALESCE(tp.proceso_id, pr_fallback.id) as proceso_id,
-        COALESCE(p.nombre, pr_fallback.nombre) as proceso_nombre,
-        COALESCE(p.descripcion, pr_fallback.descripcion) as proceso_descripcion,
-        COALESCE(tp.actividad_id, ac_fallback.id) as actividad_id,
-        COALESCE(ac.nombre, ac_fallback.nombre) as actividad_nombre,
-        COALESCE(ac.descripcion, ac_fallback.descripcion) as actividad_descripcion,
-        COALESCE(CONCAT(u.nombre, ' ', u.apellido), u.email) as usuario_registra,
-        DATE_FORMAT(tp.fecha_creacion, '%Y-%m-%d') as fecha_registro
+        COALESCE(MAX(p.nombre), MAX(pr_fallback.nombre)) as proceso_nombre,
+        COALESCE(MAX(p.descripcion), MAX(pr_fallback.descripcion)) as proceso_descripcion,
+        COALESCE(tp.actividad_id, MAX(ac_fallback.id)) as actividad_id,
+        COALESCE(MAX(ac.nombre), MAX(ac_fallback.nombre)) as actividad_nombre,
+        COALESCE(MAX(ac.descripcion), MAX(ac_fallback.descripcion)) as actividad_descripcion,
+        COALESCE(MAX(CONCAT(u.nombre, ' ', u.apellido)), MAX(u.email)) as usuario_registra,
+        DATE_FORMAT(MAX(tp.fecha_creacion), '%Y-%m-%d') as fecha_registro
       FROM tiempos_procedimientos tp
       INNER JOIN procedimientos pr ON tp.procedimiento_id = pr.id
-      INNER JOIN elementos_estructura ee_proc ON pr.id = ee_proc.elemento_id AND ee_proc.tipo = 'procedimiento'
+      INNER JOIN elementos_estructura ee_proc ON pr.id = ee_proc.elemento_id 
+        AND ee_proc.tipo = 'procedimiento'
+        AND ee_proc.estructura_id = ?
       LEFT JOIN empleos e ON tp.empleo_id = e.id
       LEFT JOIN procesos p ON tp.proceso_id = p.id
       LEFT JOIN actividades ac ON tp.actividad_id = ac.id
@@ -1224,7 +1228,6 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
       LEFT JOIN usuarios u ON tp.usuario_id = u.id
       WHERE tp.activo = 1 
         AND tp.estructura_id = ?
-        AND ee_proc.estructura_id = ?
         AND (
           -- Filtrar por dependencia: el proceso debe pertenecer a la dependencia seleccionada
           (tp.proceso_id IS NOT NULL AND p.dependencia_id = ?)
@@ -1236,7 +1239,13 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
           -- Esto permite mostrar procedimientos que fueron creados sin proceso/actividad asignado
           (tp.proceso_id IS NULL AND (ac_fallback.proceso_id IS NULL OR pr_fallback.dependencia_id IS NULL))
         )
-      ORDER BY COALESCE(p.nombre, pr_fallback.nombre), COALESCE(ac.nombre, ac_fallback.nombre), pr.nombre`,
+      GROUP BY tp.id, pr.id, pr.nombre, pr.descripcion, tp.frecuencia_mensual, 
+               tp.tiempo_estandar, tp.tiempo_minimo, tp.tiempo_promedio, tp.tiempo_maximo,
+               tp.horas_directivo, tp.horas_asesor, tp.horas_profesional, tp.horas_tecnico,
+               tp.horas_asistencial, tp.grado, e.grado, tp.horas_contratista, 
+               tp.horas_trabajador_oficial, tp.observaciones, tp.proceso_id, pr_fallback.id,
+               tp.actividad_id, ac_fallback.id
+      ORDER BY COALESCE(MAX(p.nombre), MAX(pr_fallback.nombre)), COALESCE(MAX(ac.nombre), MAX(ac_fallback.nombre)), pr.nombre`,
       [estructuraId, estructuraId, dependenciaId, dependenciaId]
     );
     
