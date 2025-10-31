@@ -1345,15 +1345,16 @@ export class TiempoProcedimientoModel extends BaseModel<TiempoProcedimiento> {
 
       const [resultados] = await db.query(query, [estructuraId, estructuraId, dependenciaId, dependenciaId]);
       
-      console.log(`🔍 Procedimientos encontrados para dependencia ${dependenciaId} en estructura ${estructuraId}:`, resultados);
+      console.log(`[DEBUG] Procedimientos encontrados para dependencia ${dependenciaId} en estructura ${estructuraId}:`, resultados);
       
       // Log para debug: verificar si el campo grado está presente
       if (Array.isArray(resultados) && resultados.length > 0) {
         const primerResultado = resultados[0] as any;
-        console.log(`🔍 Primer resultado completo:`, primerResultado);
-        console.log(`🔍 Primer resultado tiene grado?:`, 'grado' in primerResultado);
-        console.log(`🔍 Valor de grado del primer resultado:`, primerResultado.grado);
-        console.log(`🔍 Keys del primer resultado:`, Object.keys(primerResultado));
+        console.log(`[DEBUG GRADO] Primer resultado completo:`, JSON.stringify(primerResultado, null, 2));
+        console.log(`[DEBUG GRADO] Primer resultado tiene grado?:`, 'grado' in primerResultado);
+        console.log(`[DEBUG GRADO] Valor de grado del primer resultado:`, primerResultado.grado);
+        console.log(`[DEBUG GRADO] Keys del primer resultado:`, Object.keys(primerResultado));
+        console.log(`[DEBUG GRADO] Tipo de grado:`, typeof primerResultado.grado);
       }
       
       return resultados as any[];
