@@ -1238,10 +1238,9 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
           OR 
           -- O si no hay proceso directo, usar el proceso de la actividad de fallback
           (tp.proceso_id IS NULL AND ac_fallback.proceso_id IS NOT NULL AND pr_fallback.dependencia_id = ?)
-          OR
-          -- Caso especial: si no hay proceso ni actividad, mostrar todos los procedimientos de la estructura
-          -- Esto permite mostrar procedimientos que fueron creados sin proceso/actividad asignado
-          (tp.proceso_id IS NULL AND (ac_fallback.proceso_id IS NULL OR pr_fallback.dependencia_id IS NULL))
+          -- NOTA: Eliminamos el caso de tiempos sin proceso/actividad porque causan duplicados
+          -- cuando se selecciona "todas las dependencias". Estos tiempos aparecerán
+          -- solo cuando tengan un proceso/actividad asignado
         )
       GROUP BY tp.id, pr.id, pr.nombre, pr.descripcion, tp.frecuencia_mensual, 
                tp.tiempo_estandar, tp.tiempo_minimo, tp.tiempo_promedio, tp.tiempo_maximo,
