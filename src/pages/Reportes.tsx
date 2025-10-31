@@ -184,8 +184,9 @@ const Reportes: React.FC = () => {
           console.log(`🔍 Cantidad de tiempos sin dependencia:`, tiemposSinDependenciaData.length);
           
           if (tiemposSinDependenciaData && tiemposSinDependenciaData.length > 0) {
-            procedimientosResponses.push(tiemposSinDependenciaData);
-            console.log(`➕ Agregados ${tiemposSinDependenciaData.length} tiempos sin dependencia asignada`);
+            // Agregar como respuesta con la misma estructura que las otras respuestas
+            procedimientosResponses.push({ success: true, data: tiemposSinDependenciaData });
+            console.log(`➕ Agregados ${tiemposSinDependenciaData.length} tiempos sin dependencia asignada como respuesta estructurada`);
           } else {
             console.log(`⚠️ No se encontraron tiempos sin dependencia asignada`);
           }
@@ -216,7 +217,15 @@ const Reportes: React.FC = () => {
         
         for (let i = 0; i < procedimientosResponses.length; i++) {
           const procedimientosResponse = procedimientosResponses[i];
-          const procedimientosData = (procedimientosResponse as any).datos || procedimientosResponse.data || [];
+          
+          // Manejar tanto respuestas estructuradas como arrays directos
+          let procedimientosData: any[] = [];
+          if (Array.isArray(procedimientosResponse)) {
+            procedimientosData = procedimientosResponse;
+          } else {
+            procedimientosData = (procedimientosResponse as any).datos || procedimientosResponse.data || [];
+          }
+          
           totalAntesDedup += procedimientosData.length;
           
           console.log(`📊 Procesando respuesta ${i + 1}/${procedimientosResponses.length} con ${procedimientosData.length} items`);
