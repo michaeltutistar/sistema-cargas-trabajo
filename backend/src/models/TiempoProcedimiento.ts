@@ -1358,17 +1358,52 @@ export class TiempoProcedimientoModel extends BaseModel<TiempoProcedimiento> {
       }
       
       // Asegurar que el campo grado esté presente en todos los resultados
-      // MySQL2 puede omitir campos NULL, así que los agregamos explícitamente
-      const resultadosConGrado = (resultados as any[]).map((row: any) => {
-        // Si no tiene el campo grado, intentar obtenerlo del query original o dejarlo como null
-        if (!('grado' in row)) {
-          console.log(`[WARNING] Resultado sin campo grado, ID: ${row.id}`);
-          // Intentar obtener el grado desde la base de datos si no está presente
-          // Por ahora, simplemente asegurarnos de que el campo exista
-          row.grado = null;
+      // MySQL2 puede omitir campos NULL o campos no mapeados correctamente
+      // Necesitamos hacer un query adicional o mapear explícitamente
+      const resultadosConGrado = await Promise.all((resultados as any[]).map(async (row: any) => {
+        // Verificar si tiene el campo grado
+        if (!('grado' in row) || row.grado === undefined) {
+          console.log(`[WARNING] Resultado sin campo grado, ID: ${row.id}, empleo_id: ${row.empleo_id || 'N/A'}`);
+          
+          // Obtener el grado desde la base de datos directamente usando el ID del tiempo_procedimiento
+          try {
+            const [gradoResult] = await db.query(
+              'SELECT grado FROM tiempos_procedimientos WHERE id = ?',
+              [row.id]
+            );
+            
+            if (Array.isArray(gradoResult) && gradoResult.length > 0) {
+              const gradoData = gradoResult[0] as any;
+              row.grado = gradoData.grado;
+              console.log(`[DEBUG] Grado recuperado para ID ${row.id}: ${row.grado}`);
+            } else {
+              // Si no se encuentra, intentar obtenerlo del empleo
+              if (row.empleo_id) {
+                const [empleoResult] = await db.query(
+                  'SELECT grado FROM empleos WHERE id = ?',
+                  [row.empleo_id]
+                );
+                if (Array.isArray(empleoResult) && empleoResult.length > 0) {
+                  const empleoData = empleoResult[0] as any;
+                  row.grado = empleoData.grado;
+                  console.log(`[DEBUG] Grado obtenido del empleo para tiempo ID ${row.id}: ${row.grado}`);
+                } else {
+                  row.grado = null;
+                }
+              } else {
+                row.grado = null;
+              }
+            }
+          } catch (error) {
+            console.error(`[ERROR] Error obteniendo grado para ID ${row.id}:`, error);
+            row.grado = null;
+          }
         }
         return row;
-      });
+      }));
+      
+      console.log(`[DEBUG] Total resultados procesados: ${resultadosConGrado.length}`);
+      console.log(`[DEBUG] Resultados con grado no-null: ${resultadosConGrado.filter((r: any) => r.grado !== null && r.grado !== undefined).length}`);
       
       return resultadosConGrado;
     } catch (error) {
