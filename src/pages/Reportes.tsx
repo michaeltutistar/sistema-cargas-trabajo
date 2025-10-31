@@ -175,14 +175,22 @@ const Reportes: React.FC = () => {
         // Estos tiempos no aparecen en las consultas por dependencia específica
         // pero sí deben aparecer en el reporte de "todas las dependencias"
         try {
+          console.log(`🔍 Obteniendo tiempos sin dependencia para estructura: ${estructuraSeleccionada}`);
           const tiemposSinDependencia = await apiService.getProcedimientosSinDependencia(estructuraSeleccionada);
+          console.log(`🔍 Respuesta tiempos sin dependencia:`, tiemposSinDependencia);
+          
           const tiemposSinDependenciaData = (tiemposSinDependencia as any).datos || tiemposSinDependencia.data || [];
+          console.log(`🔍 Datos extraídos de tiempos sin dependencia:`, tiemposSinDependenciaData);
+          console.log(`🔍 Cantidad de tiempos sin dependencia:`, tiemposSinDependenciaData.length);
+          
           if (tiemposSinDependenciaData && tiemposSinDependenciaData.length > 0) {
             procedimientosResponses.push(tiemposSinDependenciaData);
             console.log(`➕ Agregados ${tiemposSinDependenciaData.length} tiempos sin dependencia asignada`);
+          } else {
+            console.log(`⚠️ No se encontraron tiempos sin dependencia asignada`);
           }
         } catch (error) {
-          console.log('⚠️ No se pudieron obtener tiempos sin dependencia asignada:', error);
+          console.error('❌ Error obteniendo tiempos sin dependencia asignada:', error);
         }
 
         // Combinar totales de todas las dependencias
