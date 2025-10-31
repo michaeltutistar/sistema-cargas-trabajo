@@ -559,7 +559,7 @@ const IngresoTiempos: React.FC = () => {
         estructuraId: estructuraSeleccionada?.id,
         procesoId: data.procesoId.toString(),
         actividadId: data.actividadId.toString(),
-        grado: data.grado,
+        grado: data.grado ? Number(data.grado) : undefined, // Asegurar que grado sea número
         frecuenciaMensual: data.frecuenciaMensual,
         tiempoMinimo: data.tiempoMinimo,
         tiempoPromedio: data.tiempoPromedio,
@@ -568,6 +568,7 @@ const IngresoTiempos: React.FC = () => {
       };
 
       console.log('📊 formData a enviar:', formData);
+      console.log('📊 grado enviado:', formData.grado, 'tipo:', typeof formData.grado);
       console.log('📊 Estructura seleccionada:', estructuraSeleccionada?.nombre, 'ID:', estructuraSeleccionada?.id);
       console.log('🔍 Debug estructuraSeleccionada:', {
         estructuraSeleccionada,

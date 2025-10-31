@@ -900,7 +900,7 @@ app.post('/api/cargas/tiempos', verificarToken, async (req, res) => {
     } = req.body;
     
     console.log('Datos recibidos para crear tiempo:', req.body);
-    console.log('Grado recibido:', grado);
+    console.log('Grado recibido:', grado, 'tipo:', typeof grado);
     
     // Validaciones
     if (!procedimientoId || !empleoId) {
@@ -932,6 +932,18 @@ app.post('/api/cargas/tiempos', verificarToken, async (req, res) => {
     
     const columnaHoras = columnasHoras[nivelJerarquico] || 'horas_profesional';
     
+    // Convertir grado a número si existe (puede venir como string del frontend)
+    let gradoNumerico = null;
+    if (grado !== undefined && grado !== null && grado !== '') {
+      gradoNumerico = Number(grado);
+      if (isNaN(gradoNumerico)) {
+        console.warn('Grado no es un número válido, guardando como NULL:', grado);
+        gradoNumerico = null;
+      }
+    }
+    
+    console.log('Grado a guardar:', gradoNumerico, 'tipo:', typeof gradoNumerico);
+    
     const [result] = await pool.query(
       `INSERT INTO tiempos_procedimientos 
        (procedimiento_id, empleo_id, usuario_id, estructura_id, proceso_id, actividad_id, grado, frecuencia_mensual, tiempo_minimo, tiempo_promedio, tiempo_maximo, 
@@ -944,7 +956,7 @@ app.post('/api/cargas/tiempos', verificarToken, async (req, res) => {
         estructuraId || null,
         procesoId || null,
         actividadId || null,
-        grado || null,
+        gradoNumerico,
         frecuenciaMensual, 
         tiempoMinimo, 
         tiempoPromedio, 
@@ -955,10 +967,14 @@ app.post('/api/cargas/tiempos', verificarToken, async (req, res) => {
       ]
     );
     
+    console.log('Tiempo creado con ID:', result.insertId);
+    
     const [nuevoTiempo] = await pool.query(
       'SELECT * FROM tiempos_procedimientos WHERE id = ?',
       [result.insertId]
     );
+    
+    console.log('Tiempo creado - grado guardado:', nuevoTiempo[0]?.grado);
     
     res.status(201).json({ success: true, data: nuevoTiempo[0] });
   } catch (error) {
