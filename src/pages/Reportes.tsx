@@ -184,18 +184,31 @@ const Reportes: React.FC = () => {
 
         // Combinar procedimientos de todas las dependencias, evitando duplicados por tiempo_id
         const procedimientosCombinados: ProcedimientoReporte[] = [];
-        const tiemposVistos = new Set<number>(); // Usar Set para rastrear tiempos ya agregados
+        const tiemposVistos = new Set<string | number>(); // Usar Set para rastrear tiempos ya agregados
         
         for (const procedimientosResponse of procedimientosResponses) {
           const procedimientosData = (procedimientosResponse as any).datos || procedimientosResponse.data || [];
           
           for (const proc of procedimientosData) {
             // Usar tiempo_id si existe, o generar un ID único basado en procedimiento_id y otros campos
-            const tiempoId = proc.tiempo_id || proc.id || `${proc.procedimiento_id}_${proc.proceso_id}_${proc.actividad_id}_${proc.empleo_id || ''}`;
+            // Convertir a string para comparación consistente
+            const tiempoId = proc.tiempo_id 
+              ? String(proc.tiempo_id)
+              : proc.id 
+                ? String(proc.id)
+                : `${proc.procedimiento_id || ''}_${proc.proceso_id || ''}_${proc.actividad_id || ''}_${proc.empleo_id || ''}_${proc.frecuencia_mensual || ''}_${proc.tiempo_estandar || ''}`;
             
             if (!tiemposVistos.has(tiempoId)) {
               tiemposVistos.add(tiempoId);
               procedimientosCombinados.push(proc);
+            } else {
+              // Log para debug si encontramos un duplicado
+              console.log('⚠️ Duplicado detectado y omitido:', {
+                tiempoId,
+                procedimiento: proc.nombre,
+                procedimiento_id: proc.procedimiento_id,
+                proceso_id: proc.proceso_id
+              });
             }
           }
         }
@@ -251,6 +264,22 @@ const Reportes: React.FC = () => {
       } else if (Array.isArray(procedimientosResponse)) {
         procedimientosData = procedimientosResponse;
       }
+      
+      // Eliminar duplicados también en el caso de dependencia única
+      const tiemposUnicos = new Map<string | number, any>();
+      for (const proc of procedimientosData) {
+        const tiempoId = proc.tiempo_id 
+          ? String(proc.tiempo_id)
+          : proc.id 
+            ? String(proc.id)
+            : `${proc.procedimiento_id || ''}_${proc.proceso_id || ''}_${proc.actividad_id || ''}_${proc.empleo_id || ''}_${proc.frecuencia_mensual || ''}_${proc.tiempo_estandar || ''}`;
+        
+        // Si ya existe, mantener el primero (o podrías usar el último)
+        if (!tiemposUnicos.has(tiempoId)) {
+          tiemposUnicos.set(tiempoId, proc);
+        }
+      }
+      procedimientosData = Array.from(tiemposUnicos.values());
       
       // Log detallado para debug
       console.log('🔍 DEBUG Procedimientos:', {
