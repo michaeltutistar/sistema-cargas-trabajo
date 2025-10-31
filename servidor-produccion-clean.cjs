@@ -1186,9 +1186,9 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
     console.log(`Estructura ID para dependencia ${dependenciaId}: ${estructuraId}`);
     
     // Buscar procedimientos que tengan tiempos registrados y estén asociados a la dependencia y estructura
-    // Usamos DISTINCT en tp.id para evitar duplicados causados por múltiples JOINs
+    // Usamos subquery para asegurar que cada tiempo aparezca solo una vez
     const [procedimientos] = await pool.query(
-      `SELECT DISTINCT
+      `SELECT 
         tp.id as tiempo_id,
         pr.id,
         pr.nombre,
@@ -1217,9 +1217,6 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
         DATE_FORMAT(tp.fecha_creacion, '%Y-%m-%d') as fecha_registro
       FROM tiempos_procedimientos tp
       INNER JOIN procedimientos pr ON tp.procedimiento_id = pr.id
-      INNER JOIN elementos_estructura ee_proc ON pr.id = ee_proc.elemento_id 
-        AND ee_proc.tipo = 'procedimiento'
-        AND ee_proc.estructura_id = ?
       LEFT JOIN empleos e ON tp.empleo_id = e.id
       LEFT JOIN procesos p ON tp.proceso_id = p.id
       LEFT JOIN actividades ac ON tp.actividad_id = ac.id
@@ -1228,6 +1225,13 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
       LEFT JOIN usuarios u ON tp.usuario_id = u.id
       WHERE tp.activo = 1 
         AND tp.estructura_id = ?
+        -- Verificar que el procedimiento esté en la estructura (usando EXISTS en lugar de JOIN para evitar duplicados)
+        AND EXISTS (
+          SELECT 1 FROM elementos_estructura ee_proc 
+          WHERE ee_proc.elemento_id = pr.id 
+          AND ee_proc.tipo = 'procedimiento'
+          AND ee_proc.estructura_id = ?
+        )
         AND (
           -- Filtrar por dependencia: el proceso debe pertenecer a la dependencia seleccionada
           (tp.proceso_id IS NOT NULL AND p.dependencia_id = ?)
