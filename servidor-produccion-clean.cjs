@@ -1168,8 +1168,24 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
     
     console.log('Obteniendo procedimientos con tiempos para dependencia:', dependenciaId);
     
-    // Buscar procedimientos que tengan tiempos registrados y estén asociados a la dependencia
-    // Los tiempos tienen proceso_id y actividad_id directos
+    // Primero obtener la estructura_id de la dependencia
+    const [dependenciaInfo] = await pool.query(`
+      SELECT ee.estructura_id
+      FROM dependencias d
+      INNER JOIN elementos_estructura ee ON d.id = ee.elemento_id
+      WHERE d.id = ? AND ee.tipo = 'dependencia'
+      LIMIT 1
+    `, [dependenciaId]);
+
+    if (!dependenciaInfo || dependenciaInfo.length === 0) {
+      console.log(`No se encontró información de estructura para dependencia ${dependenciaId}`);
+      return res.json({ success: true, data: [] });
+    }
+
+    const estructuraId = dependenciaInfo[0].estructura_id;
+    console.log(`Estructura ID para dependencia ${dependenciaId}: ${estructuraId}`);
+    
+    // Buscar procedimientos que tengan tiempos registrados y estén asociados a la dependencia y estructura
     const [procedimientos] = await pool.query(
       `SELECT DISTINCT
         pr.id,
@@ -1189,23 +1205,35 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
         tp.horas_contratista,
         tp.horas_trabajador_oficial,
         tp.observaciones,
-        p.id as proceso_id,
-        p.nombre as proceso_nombre,
-        p.descripcion as proceso_descripcion,
-        ac.id as actividad_id,
-        ac.nombre as actividad_nombre,
-        ac.descripcion as actividad_descripcion,
-        CONCAT(u.nombre, ' ', u.apellido) as usuario_registra,
-        tp.fecha_creacion as fecha_registro
+        COALESCE(tp.proceso_id, pr_fallback.id) as proceso_id,
+        COALESCE(p.nombre, pr_fallback.nombre) as proceso_nombre,
+        COALESCE(p.descripcion, pr_fallback.descripcion) as proceso_descripcion,
+        COALESCE(tp.actividad_id, ac_fallback.id) as actividad_id,
+        COALESCE(ac.nombre, ac_fallback.nombre) as actividad_nombre,
+        COALESCE(ac.descripcion, ac_fallback.descripcion) as actividad_descripcion,
+        COALESCE(CONCAT(u.nombre, ' ', u.apellido), u.email) as usuario_registra,
+        DATE_FORMAT(tp.fecha_creacion, '%Y-%m-%d') as fecha_registro
       FROM tiempos_procedimientos tp
       INNER JOIN procedimientos pr ON tp.procedimiento_id = pr.id
-      INNER JOIN procesos p ON tp.proceso_id = p.id
-      INNER JOIN actividades ac ON tp.actividad_id = ac.id
+      INNER JOIN elementos_estructura ee_proc ON pr.id = ee_proc.elemento_id AND ee_proc.tipo = 'procedimiento'
       LEFT JOIN empleos e ON tp.empleo_id = e.id
+      LEFT JOIN procesos p ON tp.proceso_id = p.id
+      LEFT JOIN actividades ac ON tp.actividad_id = ac.id
+      LEFT JOIN actividades ac_fallback ON pr.actividad_id = ac_fallback.id
+      LEFT JOIN procesos pr_fallback ON ac_fallback.proceso_id = pr_fallback.id
       LEFT JOIN usuarios u ON tp.usuario_id = u.id
-      WHERE tp.activo = 1 AND p.dependencia_id = ?
-      ORDER BY p.nombre, ac.nombre, pr.nombre`,
-      [dependenciaId]
+      WHERE tp.activo = 1 
+        AND tp.estructura_id = ?
+        AND ee_proc.estructura_id = ?
+        AND (
+          -- Filtrar por dependencia: el proceso debe pertenecer a la dependencia seleccionada
+          (tp.proceso_id IS NOT NULL AND p.dependencia_id = ?)
+          OR 
+          -- O si no hay proceso directo, usar el proceso de la actividad de fallback
+          (tp.proceso_id IS NULL AND ac_fallback.proceso_id IS NOT NULL AND pr_fallback.dependencia_id = ?)
+        )
+      ORDER BY COALESCE(p.nombre, pr_fallback.nombre), COALESCE(ac.nombre, ac_fallback.nombre), pr.nombre`,
+      [estructuraId, estructuraId, dependenciaId, dependenciaId]
     );
     
     console.log('Procedimientos encontrados:', procedimientos.length);
