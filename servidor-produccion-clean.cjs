@@ -1185,6 +1185,7 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
         tp.horas_profesional,
         tp.horas_tecnico,
         tp.horas_asistencial,
+        COALESCE(tp.grado, e.grado, NULL) as grado,
         tp.horas_contratista,
         tp.horas_trabajador_oficial,
         tp.observaciones,
@@ -1200,6 +1201,7 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
       INNER JOIN procedimientos pr ON tp.procedimiento_id = pr.id
       INNER JOIN procesos p ON tp.proceso_id = p.id
       INNER JOIN actividades ac ON tp.actividad_id = ac.id
+      LEFT JOIN empleos e ON tp.empleo_id = e.id
       LEFT JOIN usuarios u ON tp.usuario_id = u.id
       WHERE tp.activo = 1 AND p.dependencia_id = ?
       ORDER BY p.nombre, ac.nombre, pr.nombre`,
