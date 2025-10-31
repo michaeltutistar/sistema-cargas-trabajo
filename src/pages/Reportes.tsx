@@ -210,9 +210,16 @@ const Reportes: React.FC = () => {
         
         let totalAntesDedup = 0;
         
-        for (const procedimientosResponse of procedimientosResponses) {
+        // Primero procesar los tiempos sin dependencia (estos no deberían estar duplicados)
+        // y luego procesar los tiempos de cada dependencia
+        console.log(`📊 Total de respuestas de procedimientos: ${procedimientosResponses.length}`);
+        
+        for (let i = 0; i < procedimientosResponses.length; i++) {
+          const procedimientosResponse = procedimientosResponses[i];
           const procedimientosData = (procedimientosResponse as any).datos || procedimientosResponse.data || [];
           totalAntesDedup += procedimientosData.length;
+          
+          console.log(`📊 Procesando respuesta ${i + 1}/${procedimientosResponses.length} con ${procedimientosData.length} items`);
           
           for (const proc of procedimientosData) {
             // Usar tiempo_id si existe (es el campo más confiable), o generar un ID único
@@ -235,13 +242,17 @@ const Reportes: React.FC = () => {
                   procedimiento: proc.nombre,
                   procedimiento_id: proc.procedimiento_id,
                   proceso_id: proc.proceso_id,
-                  actividad_id: proc.actividad_id
+                  actividad_id: proc.actividad_id,
+                  tiempo_id: proc.tiempo_id,
+                  id: proc.id
                 },
                 existente: {
                   procedimiento: existente?.nombre,
                   procedimiento_id: existente?.procedimiento_id,
                   proceso_id: existente?.proceso_id,
-                  actividad_id: existente?.actividad_id
+                  actividad_id: existente?.actividad_id,
+                  tiempo_id: existente?.tiempo_id,
+                  id: existente?.id
                 }
               });
             }
@@ -249,6 +260,7 @@ const Reportes: React.FC = () => {
         }
         
         console.log(`📊 Deduplicación: ${totalAntesDedup} items antes, ${procedimientosCombinados.length} después`);
+        console.log(`📊 Tiempos únicos por tiempo_id:`, Array.from(tiemposVistos.keys()));
 
         const reporteData: ReporteData = {
           estructura,
