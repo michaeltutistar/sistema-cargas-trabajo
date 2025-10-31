@@ -1231,6 +1231,10 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
           OR 
           -- O si no hay proceso directo, usar el proceso de la actividad de fallback
           (tp.proceso_id IS NULL AND ac_fallback.proceso_id IS NOT NULL AND pr_fallback.dependencia_id = ?)
+          OR
+          -- Caso especial: si no hay proceso ni actividad, mostrar todos los procedimientos de la estructura
+          -- Esto permite mostrar procedimientos que fueron creados sin proceso/actividad asignado
+          (tp.proceso_id IS NULL AND (ac_fallback.proceso_id IS NULL OR pr_fallback.dependencia_id IS NULL))
         )
       ORDER BY COALESCE(p.nombre, pr_fallback.nombre), COALESCE(ac.nombre, ac_fallback.nombre), pr.nombre`,
       [estructuraId, estructuraId, dependenciaId, dependenciaId]
