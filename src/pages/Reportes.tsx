@@ -170,6 +170,20 @@ const Reportes: React.FC = () => {
           Promise.all(totalesPromises),
           Promise.all(procedimientosPromises)
         ]);
+        
+        // Obtener tiempos sin proceso/actividad directamente de la estructura
+        // Estos tiempos no aparecen en las consultas por dependencia específica
+        // pero sí deben aparecer en el reporte de "todas las dependencias"
+        try {
+          const tiemposSinDependencia = await apiService.getProcedimientosSinDependencia(estructuraSeleccionada);
+          const tiemposSinDependenciaData = (tiemposSinDependencia as any).datos || tiemposSinDependencia.data || [];
+          if (tiemposSinDependenciaData && tiemposSinDependenciaData.length > 0) {
+            procedimientosResponses.push(tiemposSinDependenciaData);
+            console.log(`➕ Agregados ${tiemposSinDependenciaData.length} tiempos sin dependencia asignada`);
+          }
+        } catch (error) {
+          console.log('⚠️ No se pudieron obtener tiempos sin dependencia asignada:', error);
+        }
 
         // Combinar totales de todas las dependencias
         const totalesCombinados = new Map<string, number>();

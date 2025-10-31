@@ -676,6 +676,10 @@ class ApiService {
   async getProcedimientosPorDependencia(dependenciaId: string): Promise<ApiResponse<any[]>> {
     return await this.request<ApiResponse<any[]>>(`/cargas/tiempos/procedimientos-por-dependencia/${dependenciaId}`);
   }
+
+  async getProcedimientosSinDependencia(estructuraId: string): Promise<ApiResponse<any[]>> {
+    return await this.request<ApiResponse<any[]>>(`/cargas/tiempos/procedimientos-sin-dependencia/${estructuraId}`);
+  }
 }
 
 export const apiService = new ApiService();

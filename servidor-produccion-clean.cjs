@@ -1238,9 +1238,9 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
           OR 
           -- O si no hay proceso directo, usar el proceso de la actividad de fallback
           (tp.proceso_id IS NULL AND ac_fallback.proceso_id IS NOT NULL AND pr_fallback.dependencia_id = ?)
-          -- NOTA: Eliminamos el caso de tiempos sin proceso/actividad porque causan duplicados
-          -- cuando se selecciona "todas las dependencias". Estos tiempos aparecerán
-          -- solo cuando tengan un proceso/actividad asignado
+          -- NOTA: Los tiempos sin proceso/actividad NO aparecen aquí para evitar duplicados
+          -- cuando se consulta por dependencia específica. Estos tiempos se manejan
+          -- en el frontend cuando se selecciona "todas las dependencias"
         )
       GROUP BY tp.id, pr.id, pr.nombre, pr.descripcion, tp.frecuencia_mensual, 
                tp.tiempo_estandar, tp.tiempo_minimo, tp.tiempo_promedio, tp.tiempo_maximo,
@@ -1256,6 +1256,75 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
     res.json({ success: true, data: procedimientos });
   } catch (error) {
     console.error('Error al obtener procedimientos por dependencia:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Endpoint para obtener procedimientos con tiempos sin proceso/actividad por estructura
+// Estos tiempos no tienen dependencia asignada y solo aparecen cuando se consulta "todas las dependencias"
+app.get('/api/cargas/tiempos/procedimientos-sin-dependencia/:estructuraId', verificarToken, async (req, res) => {
+  try {
+    const { estructuraId } = req.params;
+    
+    console.log('Obteniendo procedimientos sin dependencia asignada para estructura:', estructuraId);
+    
+    const [procedimientos] = await pool.query(
+      `SELECT 
+        tp.id as tiempo_id,
+        pr.id,
+        pr.nombre,
+        pr.descripcion,
+        tp.frecuencia_mensual,
+        tp.tiempo_estandar,
+        tp.tiempo_minimo,
+        tp.tiempo_promedio,
+        tp.tiempo_maximo,
+        tp.horas_directivo,
+        tp.horas_asesor,
+        tp.horas_profesional,
+        tp.horas_tecnico,
+        tp.horas_asistencial,
+        COALESCE(tp.grado, e.grado, NULL) as grado,
+        tp.horas_contratista,
+        tp.horas_trabajador_oficial,
+        tp.observaciones,
+        NULL as proceso_id,
+        NULL as proceso_nombre,
+        NULL as proceso_descripcion,
+        NULL as actividad_id,
+        NULL as actividad_nombre,
+        NULL as actividad_descripcion,
+        COALESCE(CONCAT(u.nombre, ' ', u.apellido), u.email) as usuario_registra,
+        DATE_FORMAT(tp.fecha_creacion, '%Y-%m-%d') as fecha_registro
+      FROM tiempos_procedimientos tp
+      INNER JOIN procedimientos pr ON tp.procedimiento_id = pr.id
+      LEFT JOIN empleos e ON tp.empleo_id = e.id
+      LEFT JOIN usuarios u ON tp.usuario_id = u.id
+      WHERE tp.activo = 1 
+        AND tp.estructura_id = ?
+        AND tp.proceso_id IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM actividades ac_fallback
+          INNER JOIN procesos pr_fallback ON ac_fallback.proceso_id = pr_fallback.id
+          WHERE ac_fallback.id = pr.actividad_id
+          AND pr_fallback.dependencia_id IS NOT NULL
+        )
+        AND EXISTS (
+          SELECT 1 FROM elementos_estructura ee_proc 
+          WHERE ee_proc.elemento_id = pr.id 
+          AND ee_proc.tipo = 'procedimiento'
+          AND ee_proc.estructura_id = ?
+        )
+      GROUP BY tp.id
+      ORDER BY pr.nombre`,
+      [estructuraId, estructuraId]
+    );
+    
+    console.log('Procedimientos sin dependencia encontrados:', procedimientos.length);
+    
+    res.json({ success: true, data: procedimientos });
+  } catch (error) {
+    console.error('Error al obtener procedimientos sin dependencia:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
