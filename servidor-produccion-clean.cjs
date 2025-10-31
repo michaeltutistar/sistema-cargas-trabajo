@@ -889,6 +889,9 @@ app.post('/api/cargas/tiempos', verificarToken, async (req, res) => {
       procedimientoId, 
       empleoId, 
       estructuraId,
+      procesoId,
+      actividadId,
+      grado,
       frecuenciaMensual, 
       tiempoMinimo, 
       tiempoPromedio, 
@@ -897,6 +900,7 @@ app.post('/api/cargas/tiempos', verificarToken, async (req, res) => {
     } = req.body;
     
     console.log('Datos recibidos para crear tiempo:', req.body);
+    console.log('Grado recibido:', grado);
     
     // Validaciones
     if (!procedimientoId || !empleoId) {
@@ -930,21 +934,24 @@ app.post('/api/cargas/tiempos', verificarToken, async (req, res) => {
     
     const [result] = await pool.query(
       `INSERT INTO tiempos_procedimientos 
-       (procedimiento_id, empleo_id, usuario_id, frecuencia_mensual, tiempo_minimo, tiempo_promedio, tiempo_maximo, 
-        tiempo_estandar, ${columnaHoras}, observaciones, estructura_id) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (procedimiento_id, empleo_id, usuario_id, estructura_id, proceso_id, actividad_id, grado, frecuencia_mensual, tiempo_minimo, tiempo_promedio, tiempo_maximo, 
+        tiempo_estandar, ${columnaHoras}, observaciones) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         procedimientoId, 
         empleoId, 
-        req.usuario.id, 
+        req.usuario.id,
+        estructuraId || null,
+        procesoId || null,
+        actividadId || null,
+        grado || null,
         frecuenciaMensual, 
         tiempoMinimo, 
         tiempoPromedio, 
         tiempoMaximo, 
         tiempoEstandar.toFixed(3), 
         totalHoras.toFixed(3), 
-        observaciones || '',
-        estructuraId || null
+        observaciones || ''
       ]
     );
     
