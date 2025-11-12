@@ -1,7 +1,7 @@
 module.exports = {
   apps: [{
     name: 'cargas-trabajo',
-    script: 'servidor-produccion.js',
+    script: 'servidor-produccion-clean.cjs',
     cwd: __dirname,
     instances: 'max',
     exec_mode: 'cluster',

@@ -12,6 +12,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const path = require('path');
 const mysql = require('mysql2/promise');
+const crypto = require('crypto');
 require('dotenv').config({ path: '.env' });
 
 console.log('🚀 Iniciando Servidor Integrado de Producción con MySQL...');
@@ -1419,25 +1420,82 @@ app.get('/api/estructura/:id', verificarToken, async (req, res) => {
 app.post('/api/estructura', verificarToken, async (req, res) => {
   try {
     const { nombre, descripcion } = req.body;
+    const usuarioId = req.usuario?.id;
     
-    if (!nombre) {
-      return res.status(400).json({ error: 'El nombre es requerido' });
+    console.log('📝 Crear estructura - Datos recibidos:', { nombre, descripcion, usuarioId });
+    
+    if (!usuarioId) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
     }
     
+    if (!nombre) {
+      return res.status(400).json({ error: 'El nombre de la estructura es requerido' });
+    }
+    
+    // Verificar si ya existe una estructura con ese nombre
+    try {
+      const [estructurasExistentes] = await pool.query(
+        'SELECT * FROM estructuras WHERE nombre = ?',
+        [nombre]
+      );
+      
+      if (estructurasExistentes.length > 0) {
+        return res.status(400).json({ error: 'Ya existe una estructura con ese nombre' });
+      }
+    } catch (error) {
+      console.error('Error verificando estructura existente:', error);
+      // Continuar si hay error en la verificación (puede ser que la tabla no exista aún)
+    }
+    
+    // Generar UUID para el id
+    const estructuraId = crypto.randomUUID();
+    
+    console.log('📝 EstructuraModel.crearEstructura - Datos:', { 
+      id: estructuraId, 
+      nombre, 
+      descripcion, 
+      usuarioCreadorId: usuarioId 
+    });
+    
     const [result] = await pool.query(
-      'INSERT INTO estructuras (nombre, descripcion, usuario_creador_id) VALUES (?, ?, ?)',
-      [nombre, descripcion || '', req.usuario.id]
+      'INSERT INTO estructuras (id, nombre, descripcion, usuario_creador_id) VALUES (?, ?, ?, ?)',
+      [estructuraId, nombre, descripcion || null, usuarioId]
     );
+    
+    console.log('✅ Estructura insertada correctamente, resultado:', result);
     
     const [nuevaEstructura] = await pool.query(
       'SELECT * FROM estructuras WHERE id = ?',
-      [result.insertId]
+      [estructuraId]
     );
+    
+    if (nuevaEstructura.length === 0) {
+      throw new Error('Error al crear la estructura: no se pudo recuperar después de la inserción');
+    }
     
     res.status(201).json({ success: true, data: nuevaEstructura[0] });
   } catch (error) {
-    console.error('Error al crear estructura:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error('❌ Error creando estructura:', error);
+    console.error('❌ Error stack:', error?.stack);
+    console.error('❌ Error message:', error?.message);
+    console.error('❌ Error code:', error?.code);
+    console.error('❌ Error errno:', error?.errno);
+    console.error('❌ Error sqlMessage:', error?.sqlMessage);
+    console.error('❌ Error sql:', error?.sql);
+    
+    // Devolver mensaje de error más descriptivo (formato compatible con frontend)
+    const mensajeError = error?.sqlMessage || error?.message || 'Error interno del servidor';
+    res.status(500).json({ 
+      error: true,
+      mensaje: `Error al crear la estructura: ${mensajeError}`,
+      codigo: 500,
+      detalles: {
+        sqlMessage: error?.sqlMessage,
+        message: error?.message,
+        code: error?.code,
+        sql: error?.sql
+      }
+    });
   }
 });
 
