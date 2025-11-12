@@ -176,9 +176,10 @@ export default function GestionEstructura() {
       setEstructuras(prev => [nuevaEstructura, ...prev]);
       toast.success('Estructura creada exitosamente');
       estructuraForm.reset();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creando estructura:', error);
-      toast.error('Error al crear la estructura');
+      const mensajeError = error?.message || error?.response?.data?.mensaje || 'Error al crear la estructura';
+      toast.error(mensajeError);
     } finally {
       setLoading(false);
     }

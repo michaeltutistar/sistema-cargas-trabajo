@@ -12,6 +12,8 @@ export class EstructuraController {
       const { nombre, descripcion } = req.body;
       const usuarioId = (req as any).usuario?.id;
 
+      console.log('📝 Crear estructura - Datos recibidos:', { nombre, descripcion, usuarioId });
+
       if (!usuarioId) {
         return res.status(401).json(generarRespuestaError('Usuario no autenticado', 401));
       }
@@ -21,9 +23,14 @@ export class EstructuraController {
       }
 
       // Verificar si ya existe una estructura con ese nombre
-      const estructuraExistente = await estructuraModel.buscarPorNombre(nombre);
-      if (estructuraExistente) {
-        return res.status(400).json(generarRespuestaError('Ya existe una estructura con ese nombre', 400));
+      try {
+        const estructuraExistente = await estructuraModel.buscarPorNombre(nombre);
+        if (estructuraExistente) {
+          return res.status(400).json(generarRespuestaError('Ya existe una estructura con ese nombre', 400));
+        }
+      } catch (error: any) {
+        console.error('Error verificando estructura existente:', error);
+        // Continuar si hay error en la verificación (puede ser que la tabla no exista aún)
       }
 
       const estructura = await estructuraModel.crearEstructura({
@@ -33,9 +40,26 @@ export class EstructuraController {
       });
 
       return res.status(201).json(generarRespuestaExito(estructura, 'Estructura creada exitosamente'));
-    } catch (error) {
-      console.error('Error creando estructura:', error);
-      return res.status(500).json(generarRespuestaError('Error interno del servidor', 500));
+    } catch (error: any) {
+      console.error('❌ Error creando estructura:', error);
+      console.error('❌ Error stack:', error?.stack);
+      console.error('❌ Error message:', error?.message);
+      console.error('❌ Error code:', error?.code);
+      console.error('❌ Error errno:', error?.errno);
+      console.error('❌ Error sqlMessage:', error?.sqlMessage);
+      console.error('❌ Error sql:', error?.sql);
+      
+      // Devolver mensaje de error más descriptivo
+      const mensajeError = error?.sqlMessage || error?.message || 'Error interno del servidor';
+      return res.status(500).json(generarRespuestaError(
+        `Error al crear la estructura: ${mensajeError}`,
+        500,
+        { 
+          detalles: error?.sqlMessage || error?.message,
+          codigo: error?.code,
+          sql: error?.sql
+        }
+      ));
     }
   }
 
