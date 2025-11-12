@@ -49,12 +49,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       const authResponse = await apiService.login(email, password);
-      
+
       setToken(authResponse.token);
-      setUser(authResponse.user);
-      
       apiService.setToken(authResponse.token);
       localStorage.setItem('token', authResponse.token);
+
+      if (authResponse.user) {
+        setUser(authResponse.user);
+      } else {
+        const userData = await apiService.getProfile();
+        setUser(userData);
+      }
     } catch (error) {
       console.error('Error al iniciar sesión:', error);
       throw error;
