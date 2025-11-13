@@ -323,7 +323,14 @@ const Reportes: React.FC = () => {
           }
           
           // Si no tiene info, mantenerlo solo si no hay otro con el mismo tiempo_id que sí tenga info
-          return !tiemposConInfo.has(tiempoId);
+          // PERO si hay otro con el mismo tiempo_id que sí tiene info, eliminar este
+          if (tiemposConInfo.has(tiempoId)) {
+            return false;
+          }
+          
+          // Si no hay otro con el mismo tiempo_id, mantenerlo solo si realmente no tiene proceso/actividad
+          // (esto puede pasar si el tiempo realmente no tiene proceso/actividad asignado)
+          return true;
         });
         
         const eliminadosSinInfo = procedimientosCombinados.length - procedimientosFinales.length;

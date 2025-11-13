@@ -1231,48 +1231,60 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
         tp.horas_contratista,
         tp.horas_trabajador_oficial,
         tp.observaciones,
-        -- Usar proceso directo si existe y pertenece a la dependencia, sino usar fallback
+        -- Usar proceso directo si existe (prioridad), sino usar fallback
         CASE 
-          WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL AND p.dependencia_id = ? THEN tp.proceso_id
-          WHEN pr_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN pr_fallback.id
-          -- Si el proceso directo existe pero pertenece a otra dependencia, usar el proceso directo de todas formas
+          -- Prioridad 1: Proceso directo si existe
           WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL THEN tp.proceso_id
+          -- Prioridad 2: Proceso de fallback si existe y pertenece a la dependencia
+          WHEN pr_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN pr_fallback.id
+          -- Prioridad 3: Proceso de fallback si existe (aunque no pertenezca a la dependencia)
+          WHEN pr_fallback.id IS NOT NULL THEN pr_fallback.id
           ELSE NULL
         END as proceso_id,
         CASE 
-          WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL AND p.dependencia_id = ? THEN p.nombre
-          WHEN pr_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN pr_fallback.nombre
-          -- Si el proceso directo existe pero pertenece a otra dependencia, usar el proceso directo de todas formas
+          -- Prioridad 1: Proceso directo si existe
           WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL THEN p.nombre
+          -- Prioridad 2: Proceso de fallback si existe y pertenece a la dependencia
+          WHEN pr_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN pr_fallback.nombre
+          -- Prioridad 3: Proceso de fallback si existe (aunque no pertenezca a la dependencia)
+          WHEN pr_fallback.id IS NOT NULL THEN pr_fallback.nombre
           ELSE NULL
         END as proceso_nombre,
         CASE 
-          WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL AND p.dependencia_id = ? THEN p.descripcion
-          WHEN pr_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN pr_fallback.descripcion
-          -- Si el proceso directo existe pero pertenece a otra dependencia, usar el proceso directo de todas formas
+          -- Prioridad 1: Proceso directo si existe
           WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL THEN p.descripcion
+          -- Prioridad 2: Proceso de fallback si existe y pertenece a la dependencia
+          WHEN pr_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN pr_fallback.descripcion
+          -- Prioridad 3: Proceso de fallback si existe (aunque no pertenezca a la dependencia)
+          WHEN pr_fallback.id IS NOT NULL THEN pr_fallback.descripcion
           ELSE NULL
         END as proceso_descripcion,
-        -- Usar actividad directa si existe y su proceso pertenece a la dependencia, sino usar fallback
+        -- Usar actividad directa si existe (prioridad), sino usar fallback
         CASE 
-          WHEN tp.actividad_id IS NOT NULL AND tp.proceso_id IS NOT NULL AND p.id IS NOT NULL AND p.dependencia_id = ? THEN tp.actividad_id
-          WHEN ac_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN ac_fallback.id
-          -- Si la actividad directa existe pero su proceso pertenece a otra dependencia, usar la actividad directa de todas formas
+          -- Prioridad 1: Actividad directa si existe
           WHEN tp.actividad_id IS NOT NULL AND ac.id IS NOT NULL THEN tp.actividad_id
+          -- Prioridad 2: Actividad de fallback si existe y su proceso pertenece a la dependencia
+          WHEN ac_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN ac_fallback.id
+          -- Prioridad 3: Actividad de fallback si existe (aunque su proceso no pertenezca a la dependencia)
+          WHEN ac_fallback.id IS NOT NULL THEN ac_fallback.id
           ELSE NULL
         END as actividad_id,
         CASE 
-          WHEN tp.actividad_id IS NOT NULL AND tp.proceso_id IS NOT NULL AND p.id IS NOT NULL AND p.dependencia_id = ? THEN ac.nombre
-          WHEN ac_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN ac_fallback.nombre
-          -- Si la actividad directa existe pero su proceso pertenece a otra dependencia, usar la actividad directa de todas formas
+          -- Prioridad 1: Actividad directa si existe
           WHEN tp.actividad_id IS NOT NULL AND ac.id IS NOT NULL THEN ac.nombre
+          -- Prioridad 2: Actividad de fallback si existe y su proceso pertenece a la dependencia
+          WHEN ac_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN ac_fallback.nombre
+          -- Prioridad 3: Actividad de fallback si existe (aunque su proceso no pertenezca a la dependencia)
+          WHEN ac_fallback.id IS NOT NULL THEN ac_fallback.nombre
           ELSE NULL
         END as actividad_nombre,
         CASE 
-          WHEN tp.actividad_id IS NOT NULL AND tp.proceso_id IS NOT NULL AND p.id IS NOT NULL AND p.dependencia_id = ? THEN ac.descripcion
-          WHEN ac_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN ac_fallback.descripcion
-          -- Si la actividad directa existe pero su proceso pertenece a otra dependencia, usar la actividad directa de todas formas
+          -- Prioridad 1: Actividad directa si existe
           WHEN tp.actividad_id IS NOT NULL AND ac.id IS NOT NULL THEN ac.descripcion
+          -- Prioridad 2: Actividad de fallback si existe y su proceso pertenece a la dependencia
+          WHEN ac_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN ac_fallback.descripcion
+          -- Prioridad 3: Actividad de fallback si existe (aunque su proceso no pertenezca a la dependencia)
+          WHEN ac_fallback.id IS NOT NULL THEN ac_fallback.descripcion
           ELSE NULL
         END as actividad_descripcion,
         COALESCE(MAX(CONCAT(u.nombre, ' ', u.apellido)), MAX(u.email)) as usuario_registra,
@@ -1314,41 +1326,47 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
                ac_fallback.id, ac_fallback.nombre, ac_fallback.descripcion
       ORDER BY 
         CASE 
-          WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL AND p.dependencia_id = ? THEN p.nombre
-          WHEN pr_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN pr_fallback.nombre
+          -- Prioridad 1: Proceso directo si existe
           WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL THEN p.nombre
+          -- Prioridad 2: Proceso de fallback si existe y pertenece a la dependencia
+          WHEN pr_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN pr_fallback.nombre
+          -- Prioridad 3: Proceso de fallback si existe (aunque no pertenezca a la dependencia)
+          WHEN pr_fallback.id IS NOT NULL THEN pr_fallback.nombre
           ELSE ''
         END,
         CASE 
-          WHEN tp.actividad_id IS NOT NULL AND tp.proceso_id IS NOT NULL AND p.id IS NOT NULL AND p.dependencia_id = ? THEN ac.nombre
-          WHEN ac_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN ac_fallback.nombre
+          -- Prioridad 1: Actividad directa si existe
           WHEN tp.actividad_id IS NOT NULL AND ac.id IS NOT NULL THEN ac.nombre
+          -- Prioridad 2: Actividad de fallback si existe y su proceso pertenece a la dependencia
+          WHEN ac_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN ac_fallback.nombre
+          -- Prioridad 3: Actividad de fallback si existe (aunque su proceso no pertenezca a la dependencia)
+          WHEN ac_fallback.id IS NOT NULL THEN ac_fallback.nombre
           ELSE ''
         END,
         pr.nombre`,
       [
-        // CASE proceso_id (líneas 1236-1237)
-        dependenciaId, dependenciaId,
-        // CASE proceso_nombre (líneas 1243-1244)
-        dependenciaId, dependenciaId,
-        // CASE proceso_descripcion (líneas 1250-1251)
-        dependenciaId, dependenciaId,
-        // CASE actividad_id (líneas 1258-1259)
-        dependenciaId, dependenciaId,
-        // CASE actividad_nombre (líneas 1265-1266)
-        dependenciaId, dependenciaId,
-        // CASE actividad_descripcion (líneas 1272-1273)
-        dependenciaId, dependenciaId,
+        // CASE proceso_id - Prioridad 2 (línea 1239)
+        dependenciaId,
+        // CASE proceso_nombre - Prioridad 2 (línea 1248)
+        dependenciaId,
+        // CASE proceso_descripcion - Prioridad 2 (línea 1257)
+        dependenciaId,
+        // CASE actividad_id - Prioridad 2 (línea 1267)
+        dependenciaId,
+        // CASE actividad_nombre - Prioridad 2 (línea 1276)
+        dependenciaId,
+        // CASE actividad_descripcion - Prioridad 2 (línea 1285)
+        dependenciaId,
         // WHERE tp.estructura_id (línea 1289)
         estructuraId,
         // EXISTS ee_proc.estructura_id (línea 1295)
         estructuraId,
         // WHERE filtro dependencia (líneas 1299, 1302, 1305)
         dependenciaId, dependenciaId, dependenciaId,
-        // ORDER BY CASE proceso (líneas 1317-1318)
-        dependenciaId, dependenciaId,
-        // ORDER BY CASE actividad (líneas 1323-1324)
-        dependenciaId, dependenciaId
+        // ORDER BY CASE proceso - Prioridad 2 (línea 1317)
+        dependenciaId,
+        // ORDER BY CASE actividad - Prioridad 2 (línea 1324)
+        dependenciaId
       ]
     );
     
