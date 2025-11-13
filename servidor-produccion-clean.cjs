@@ -1400,29 +1400,63 @@ app.get('/api/cargas/tiempos/procedimientos-sin-dependencia/:estructuraId', veri
         tp.horas_contratista,
         tp.horas_trabajador_oficial,
         tp.observaciones,
-        tp.proceso_id,
-        NULL as proceso_nombre,
-        NULL as proceso_descripcion,
-        tp.actividad_id,
-        NULL as actividad_nombre,
-        NULL as actividad_descripcion,
-        COALESCE(CONCAT(u.nombre, ' ', u.apellido), u.email) as usuario_registra,
-        DATE_FORMAT(tp.fecha_creacion, '%Y-%m-%d') as fecha_registro
+        -- Usar proceso directo si existe, sino usar fallback
+        CASE 
+          WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL THEN tp.proceso_id
+          WHEN pr_fallback.id IS NOT NULL THEN pr_fallback.id
+          ELSE NULL
+        END as proceso_id,
+        CASE 
+          WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL THEN p.nombre
+          WHEN pr_fallback.id IS NOT NULL THEN pr_fallback.nombre
+          ELSE NULL
+        END as proceso_nombre,
+        CASE 
+          WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL THEN p.descripcion
+          WHEN pr_fallback.id IS NOT NULL THEN pr_fallback.descripcion
+          ELSE NULL
+        END as proceso_descripcion,
+        -- Usar actividad directa si existe, sino usar fallback
+        CASE 
+          WHEN tp.actividad_id IS NOT NULL AND ac.id IS NOT NULL THEN tp.actividad_id
+          WHEN ac_fallback.id IS NOT NULL THEN ac_fallback.id
+          ELSE NULL
+        END as actividad_id,
+        CASE 
+          WHEN tp.actividad_id IS NOT NULL AND ac.id IS NOT NULL THEN ac.nombre
+          WHEN ac_fallback.id IS NOT NULL THEN ac_fallback.nombre
+          ELSE NULL
+        END as actividad_nombre,
+        CASE 
+          WHEN tp.actividad_id IS NOT NULL AND ac.id IS NOT NULL THEN ac.descripcion
+          WHEN ac_fallback.id IS NOT NULL THEN ac_fallback.descripcion
+          ELSE NULL
+        END as actividad_descripcion,
+        COALESCE(MAX(CONCAT(u.nombre, ' ', u.apellido)), MAX(u.email)) as usuario_registra,
+        DATE_FORMAT(MAX(tp.fecha_creacion), '%Y-%m-%d') as fecha_registro
       FROM tiempos_procedimientos tp
       INNER JOIN procedimientos pr ON tp.procedimiento_id = pr.id
       LEFT JOIN empleos e ON tp.empleo_id = e.id
       LEFT JOIN usuarios u ON tp.usuario_id = u.id
       LEFT JOIN procesos p ON tp.proceso_id = p.id
+      LEFT JOIN actividades ac ON tp.actividad_id = ac.id
       LEFT JOIN actividades ac_fallback ON pr.actividad_id = ac_fallback.id
       LEFT JOIN procesos pr_fallback ON ac_fallback.proceso_id = pr_fallback.id
       WHERE tp.activo = 1 
         AND tp.estructura_id = ?
-        -- Tiempos que no tienen proceso/actividad asignado y no tienen dependencia asociada
-        AND tp.proceso_id IS NULL
+        -- Tiempos que no están asociados a ninguna dependencia específica
+        -- (no tienen proceso con dependencia o el proceso no tiene dependencia)
         AND (
-          -- O no tienen actividad de fallback
+          -- No tienen proceso asignado
+          (tp.proceso_id IS NULL)
+          OR
+          -- O tienen proceso pero el proceso no tiene dependencia asignada
+          (tp.proceso_id IS NOT NULL AND (p.id IS NULL OR p.dependencia_id IS NULL))
+        )
+        -- Y no tienen actividad de fallback con proceso que tenga dependencia
+        AND (
           ac_fallback.id IS NULL
-          -- O la actividad de fallback no tiene proceso con dependencia
+          OR pr_fallback.id IS NULL
           OR pr_fallback.dependencia_id IS NULL
         )
         -- Verificar que el procedimiento esté en la estructura
@@ -1432,8 +1466,26 @@ app.get('/api/cargas/tiempos/procedimientos-sin-dependencia/:estructuraId', veri
           AND ee_proc.tipo = 'procedimiento'
           AND ee_proc.estructura_id = ?
         )
-      GROUP BY tp.id
-      ORDER BY pr.nombre`,
+      GROUP BY tp.id, pr.id, pr.nombre, pr.descripcion, tp.frecuencia_mensual, 
+               tp.tiempo_estandar, tp.tiempo_minimo, tp.tiempo_promedio, tp.tiempo_maximo,
+               tp.horas_directivo, tp.horas_asesor, tp.horas_profesional, tp.horas_tecnico,
+               tp.horas_asistencial, tp.grado, e.grado, tp.horas_contratista, 
+               tp.horas_trabajador_oficial, tp.observaciones, tp.proceso_id, tp.actividad_id,
+               p.id, p.nombre, p.descripcion, ac.id, ac.nombre, ac.descripcion,
+               pr_fallback.id, pr_fallback.nombre, pr_fallback.descripcion,
+               ac_fallback.id, ac_fallback.nombre, ac_fallback.descripcion
+      ORDER BY 
+        CASE 
+          WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL THEN p.nombre
+          WHEN pr_fallback.id IS NOT NULL THEN pr_fallback.nombre
+          ELSE ''
+        END,
+        CASE 
+          WHEN tp.actividad_id IS NOT NULL AND ac.id IS NOT NULL THEN ac.nombre
+          WHEN ac_fallback.id IS NOT NULL THEN ac_fallback.nombre
+          ELSE ''
+        END,
+        pr.nombre`,
       [estructuraId, estructuraId]
     );
     
@@ -1441,8 +1493,19 @@ app.get('/api/cargas/tiempos/procedimientos-sin-dependencia/:estructuraId', veri
     
     res.json({ success: true, data: procedimientos });
   } catch (error) {
-    console.error('Error al obtener procedimientos sin dependencia:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error('❌ Error al obtener procedimientos sin dependencia:', error);
+    console.error('❌ Error stack:', error?.stack);
+    console.error('❌ Error message:', error?.message);
+    console.error('❌ Error code:', error?.code);
+    console.error('❌ Error errno:', error?.errno);
+    console.error('❌ Error sqlMessage:', error?.sqlMessage);
+    console.error('❌ Error sql:', error?.sql);
+    const mensajeError = error?.sqlMessage || error?.message || 'Error interno del servidor';
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      mensaje: mensajeError,
+      detalles: error?.sqlMessage || error?.message
+    });
   }
 });
 
