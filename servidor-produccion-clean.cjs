@@ -1,4 +1,4 @@
-/**
+ /**
  * SERVIDOR INTEGRADO PARA PRODUCCION
  * Sistema de Gestion de Cargas de Trabajo
  * 
@@ -1231,12 +1231,50 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
         tp.horas_contratista,
         tp.horas_trabajador_oficial,
         tp.observaciones,
-        COALESCE(tp.proceso_id, MAX(pr_fallback.id)) as proceso_id,
-        COALESCE(MAX(p.nombre), MAX(pr_fallback.nombre)) as proceso_nombre,
-        COALESCE(MAX(p.descripcion), MAX(pr_fallback.descripcion)) as proceso_descripcion,
-        COALESCE(tp.actividad_id, MAX(ac_fallback.id)) as actividad_id,
-        COALESCE(MAX(ac.nombre), MAX(ac_fallback.nombre)) as actividad_nombre,
-        COALESCE(MAX(ac.descripcion), MAX(ac_fallback.descripcion)) as actividad_descripcion,
+        -- Usar proceso directo si existe y pertenece a la dependencia, sino usar fallback
+        CASE 
+          WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL AND p.dependencia_id = ? THEN tp.proceso_id
+          WHEN pr_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN pr_fallback.id
+          -- Si el proceso directo existe pero pertenece a otra dependencia, usar el proceso directo de todas formas
+          WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL THEN tp.proceso_id
+          ELSE NULL
+        END as proceso_id,
+        CASE 
+          WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL AND p.dependencia_id = ? THEN p.nombre
+          WHEN pr_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN pr_fallback.nombre
+          -- Si el proceso directo existe pero pertenece a otra dependencia, usar el proceso directo de todas formas
+          WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL THEN p.nombre
+          ELSE NULL
+        END as proceso_nombre,
+        CASE 
+          WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL AND p.dependencia_id = ? THEN p.descripcion
+          WHEN pr_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN pr_fallback.descripcion
+          -- Si el proceso directo existe pero pertenece a otra dependencia, usar el proceso directo de todas formas
+          WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL THEN p.descripcion
+          ELSE NULL
+        END as proceso_descripcion,
+        -- Usar actividad directa si existe y su proceso pertenece a la dependencia, sino usar fallback
+        CASE 
+          WHEN tp.actividad_id IS NOT NULL AND tp.proceso_id IS NOT NULL AND p.id IS NOT NULL AND p.dependencia_id = ? THEN tp.actividad_id
+          WHEN ac_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN ac_fallback.id
+          -- Si la actividad directa existe pero su proceso pertenece a otra dependencia, usar la actividad directa de todas formas
+          WHEN tp.actividad_id IS NOT NULL AND ac.id IS NOT NULL THEN tp.actividad_id
+          ELSE NULL
+        END as actividad_id,
+        CASE 
+          WHEN tp.actividad_id IS NOT NULL AND tp.proceso_id IS NOT NULL AND p.id IS NOT NULL AND p.dependencia_id = ? THEN ac.nombre
+          WHEN ac_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN ac_fallback.nombre
+          -- Si la actividad directa existe pero su proceso pertenece a otra dependencia, usar la actividad directa de todas formas
+          WHEN tp.actividad_id IS NOT NULL AND ac.id IS NOT NULL THEN ac.nombre
+          ELSE NULL
+        END as actividad_nombre,
+        CASE 
+          WHEN tp.actividad_id IS NOT NULL AND tp.proceso_id IS NOT NULL AND p.id IS NOT NULL AND p.dependencia_id = ? THEN ac.descripcion
+          WHEN ac_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN ac_fallback.descripcion
+          -- Si la actividad directa existe pero su proceso pertenece a otra dependencia, usar la actividad directa de todas formas
+          WHEN tp.actividad_id IS NOT NULL AND ac.id IS NOT NULL THEN ac.descripcion
+          ELSE NULL
+        END as actividad_descripcion,
         COALESCE(MAX(CONCAT(u.nombre, ' ', u.apellido)), MAX(u.email)) as usuario_registra,
         DATE_FORMAT(MAX(tp.fecha_creacion), '%Y-%m-%d') as fecha_registro
       FROM tiempos_procedimientos tp
@@ -1257,22 +1295,38 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
           AND ee_proc.estructura_id = ?
         )
         AND (
-          -- Filtrar por dependencia: el proceso debe pertenecer a la dependencia seleccionada
-          (tp.proceso_id IS NOT NULL AND p.dependencia_id = ?)
+          -- Filtrar por dependencia: el proceso directo debe pertenecer a la dependencia seleccionada
+          (tp.proceso_id IS NOT NULL AND p.id IS NOT NULL AND p.dependencia_id = ?)
           OR 
-          -- O si no hay proceso directo, usar el proceso de la actividad de fallback
-          (tp.proceso_id IS NULL AND ac_fallback.proceso_id IS NOT NULL AND pr_fallback.dependencia_id = ?)
-          -- NOTA: Los tiempos sin proceso/actividad NO aparecen aquí para evitar duplicados
-          -- cuando se consulta por dependencia específica. Estos tiempos se manejan
-          -- en el frontend cuando se selecciona "todas las dependencias"
+          -- O usar el proceso de la actividad de fallback si pertenece a la dependencia
+          (pr_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ?)
+          -- Si el proceso directo existe pero pertenece a otra dependencia, aún así incluirlo
+          -- para que aparezca en el reporte con su proceso/actividad correcto
+          OR (tp.proceso_id IS NOT NULL AND p.id IS NOT NULL AND p.dependencia_id != ?)
         )
       GROUP BY tp.id, pr.id, pr.nombre, pr.descripcion, tp.frecuencia_mensual, 
                tp.tiempo_estandar, tp.tiempo_minimo, tp.tiempo_promedio, tp.tiempo_maximo,
                tp.horas_directivo, tp.horas_asesor, tp.horas_profesional, tp.horas_tecnico,
                tp.horas_asistencial, tp.grado, e.grado, tp.horas_contratista, 
-               tp.horas_trabajador_oficial, tp.observaciones, tp.proceso_id, tp.actividad_id
-      ORDER BY COALESCE(MAX(p.nombre), MAX(pr_fallback.nombre)), COALESCE(MAX(ac.nombre), MAX(ac_fallback.nombre)), pr.nombre`,
-      [estructuraId, estructuraId, dependenciaId, dependenciaId]
+               tp.horas_trabajador_oficial, tp.observaciones, tp.proceso_id, tp.actividad_id,
+               p.dependencia_id, p.nombre, p.descripcion, ac.nombre, ac.descripcion,
+               pr_fallback.id, pr_fallback.nombre, pr_fallback.descripcion,
+               ac_fallback.id, ac_fallback.nombre, ac_fallback.descripcion
+      ORDER BY 
+        CASE 
+          WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL AND p.dependencia_id = ? THEN p.nombre
+          WHEN pr_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN pr_fallback.nombre
+          WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL THEN p.nombre
+          ELSE ''
+        END,
+        CASE 
+          WHEN tp.actividad_id IS NOT NULL AND tp.proceso_id IS NOT NULL AND p.id IS NOT NULL AND p.dependencia_id = ? THEN ac.nombre
+          WHEN ac_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN ac_fallback.nombre
+          WHEN tp.actividad_id IS NOT NULL AND ac.id IS NOT NULL THEN ac.nombre
+          ELSE ''
+        END,
+        pr.nombre`,
+      [dependenciaId, dependenciaId, dependenciaId, dependenciaId, dependenciaId, dependenciaId, dependenciaId, dependenciaId, estructuraId, estructuraId, dependenciaId, dependenciaId, dependenciaId, dependenciaId, dependenciaId, dependenciaId, dependenciaId, dependenciaId]
     );
     
     console.log('Procedimientos encontrados:', procedimientos.length);
