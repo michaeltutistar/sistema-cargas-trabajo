@@ -1326,15 +1326,49 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
           ELSE ''
         END,
         pr.nombre`,
-      [dependenciaId, dependenciaId, dependenciaId, dependenciaId, dependenciaId, dependenciaId, dependenciaId, dependenciaId, estructuraId, estructuraId, dependenciaId, dependenciaId, dependenciaId, dependenciaId, dependenciaId, dependenciaId, dependenciaId, dependenciaId]
+      [
+        // CASE proceso_id (líneas 1236-1237)
+        dependenciaId, dependenciaId,
+        // CASE proceso_nombre (líneas 1243-1244)
+        dependenciaId, dependenciaId,
+        // CASE proceso_descripcion (líneas 1250-1251)
+        dependenciaId, dependenciaId,
+        // CASE actividad_id (líneas 1258-1259)
+        dependenciaId, dependenciaId,
+        // CASE actividad_nombre (líneas 1265-1266)
+        dependenciaId, dependenciaId,
+        // CASE actividad_descripcion (líneas 1272-1273)
+        dependenciaId, dependenciaId,
+        // WHERE tp.estructura_id (línea 1289)
+        estructuraId,
+        // EXISTS ee_proc.estructura_id (línea 1295)
+        estructuraId,
+        // WHERE filtro dependencia (líneas 1299, 1302, 1305)
+        dependenciaId, dependenciaId, dependenciaId,
+        // ORDER BY CASE proceso (líneas 1317-1318)
+        dependenciaId, dependenciaId,
+        // ORDER BY CASE actividad (líneas 1323-1324)
+        dependenciaId, dependenciaId
+      ]
     );
     
     console.log('Procedimientos encontrados:', procedimientos.length);
     
     res.json({ success: true, data: procedimientos });
   } catch (error) {
-    console.error('Error al obtener procedimientos por dependencia:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error('❌ Error al obtener procedimientos por dependencia:', error);
+    console.error('❌ Error stack:', error?.stack);
+    console.error('❌ Error message:', error?.message);
+    console.error('❌ Error code:', error?.code);
+    console.error('❌ Error errno:', error?.errno);
+    console.error('❌ Error sqlMessage:', error?.sqlMessage);
+    console.error('❌ Error sql:', error?.sql);
+    const mensajeError = error?.sqlMessage || error?.message || 'Error interno del servidor';
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      mensaje: mensajeError,
+      detalles: error?.sqlMessage || error?.message
+    });
   }
 });
 
