@@ -1,16 +1,44 @@
-require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
+// Intentar cargar .env desde diferentes ubicaciones
+const path = require('path');
+const fs = require('fs');
+
+// Buscar archivo .env
+let envPath = path.join(__dirname, '../../.env');
+if (!fs.existsSync(envPath)) {
+  envPath = path.join(__dirname, '../../../.env');
+}
+if (!fs.existsSync(envPath)) {
+  envPath = '/var/www/sistema-cargas-trabajo/.env';
+}
+
+if (fs.existsSync(envPath)) {
+  require('dotenv').config({ path: envPath });
+  console.log(`📄 Cargando .env desde: ${envPath}`);
+} else {
+  console.log('⚠️ No se encontró archivo .env, usando variables de entorno del sistema');
+}
+
 const mysql = require('mysql2/promise');
 
 (async () => {
   try {
-    const pool = mysql.createPool({
-      host: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASS,
-      database: process.env.DB_NAME,
+    // Usar variables de entorno o valores por defecto (igual que servidor-produccion-clean.cjs)
+    const dbConfig = {
+      host: process.env.DB_HOST || 'localhost',
+      port: process.env.DB_PORT || 3306,
+      user: process.env.DB_USER || 'cargas_user',
+      password: process.env.DB_PASSWORD || process.env.DB_PASS || '',
+      database: process.env.DB_NAME || 'cargas_trabajo',
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0
+    };
+    
+    console.log('🔧 Configuración MySQL:', {
+      host: dbConfig.host,
+      port: dbConfig.port,
+      user: dbConfig.user,
+      database: dbConfig.database
     });
 
     console.log('🔍 Verificando tiempos de la estructura INDUMIL...\n');
