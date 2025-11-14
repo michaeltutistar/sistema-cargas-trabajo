@@ -1331,14 +1331,6 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
             WHERE ac_check.id = pr.actividad_id
             AND pr_check.dependencia_id = ?
           )
-          OR
-          -- También incluir tiempos que tienen proceso asignado pero el proceso no tiene dependencia_id
-          -- (esto captura casos como "Gestión Estratégica" que tiene proceso pero sin dependencia asignada)
-          (tp.proceso_id IS NOT NULL AND EXISTS (
-            SELECT 1 FROM procesos p_check 
-            WHERE p_check.id = tp.proceso_id 
-            AND p_check.dependencia_id IS NULL
-          ))
         )
       GROUP BY tp.id, pr.id, pr.nombre, pr.descripcion, tp.frecuencia_mensual, 
                tp.tiempo_estandar, tp.tiempo_minimo, tp.tiempo_promedio, tp.tiempo_maximo,
