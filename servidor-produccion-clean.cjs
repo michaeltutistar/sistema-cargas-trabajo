@@ -1317,18 +1317,20 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
           AND ee_proc.estructura_id = ?
         )
         AND (
-          -- Filtrar por dependencia: el proceso directo debe pertenecer a la dependencia seleccionada
-          (tp.proceso_id IS NOT NULL AND p.id IS NOT NULL AND p.dependencia_id = ?)
-          OR 
-          -- O usar el proceso de la actividad de fallback si pertenece a la dependencia
-          (pr_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ?)
-          OR
-          -- También incluir si el proceso directo existe pero el JOIN falló (por seguridad)
-          (tp.proceso_id IS NOT NULL AND EXISTS (
+          -- Incluir tiempos cuyo proceso directo pertenece a la dependencia
+          EXISTS (
             SELECT 1 FROM procesos p_check 
             WHERE p_check.id = tp.proceso_id 
             AND p_check.dependencia_id = ?
-          ))
+          )
+          OR
+          -- O incluir tiempos cuyo proceso de fallback (a través de la actividad del procedimiento) pertenece a la dependencia
+          EXISTS (
+            SELECT 1 FROM actividades ac_check
+            INNER JOIN procesos pr_check ON ac_check.proceso_id = pr_check.id
+            WHERE ac_check.id = pr.actividad_id
+            AND pr_check.dependencia_id = ?
+          )
         )
       GROUP BY tp.id, pr.id, pr.nombre, pr.descripcion, tp.frecuencia_mensual, 
                tp.tiempo_estandar, tp.tiempo_minimo, tp.tiempo_promedio, tp.tiempo_maximo,
@@ -1375,11 +1377,9 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
         estructuraId,
         // EXISTS ee_proc.estructura_id (línea 1307)
         estructuraId,
-        // WHERE filtro dependencia - proceso directo (línea 1311)
+        // WHERE filtro dependencia - EXISTS proceso directo (línea 1324)
         dependenciaId,
-        // WHERE filtro dependencia - proceso fallback (línea 1314)
-        dependenciaId,
-        // WHERE filtro dependencia - EXISTS proceso directo (línea 1320)
+        // WHERE filtro dependencia - EXISTS proceso fallback (línea 1332)
         dependenciaId,
         // ORDER BY CASE proceso - Prioridad 2 (línea 1332)
         dependenciaId,
