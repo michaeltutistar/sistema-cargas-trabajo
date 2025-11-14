@@ -1312,9 +1312,6 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
           OR 
           -- O usar el proceso de la actividad de fallback si pertenece a la dependencia
           (pr_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ?)
-          -- Si el proceso directo existe pero pertenece a otra dependencia, aún así incluirlo
-          -- para que aparezca en el reporte con su proceso/actividad correcto
-          OR (tp.proceso_id IS NOT NULL AND p.id IS NOT NULL AND p.dependencia_id != ?)
         )
       GROUP BY tp.id, pr.id, pr.nombre, pr.descripcion, tp.frecuencia_mensual, 
                tp.tiempo_estandar, tp.tiempo_minimo, tp.tiempo_promedio, tp.tiempo_maximo,
@@ -1462,20 +1459,14 @@ app.get('/api/cargas/tiempos/procedimientos-sin-dependencia/:estructuraId', veri
       LEFT JOIN procesos pr_fallback ON ac_fallback.proceso_id = pr_fallback.id
       WHERE tp.activo = 1 
         AND tp.estructura_id = ?
-        -- Tiempos que no están asociados a ninguna dependencia específica
-        -- (no tienen proceso con dependencia o el proceso no tiene dependencia)
-        AND (
-          -- No tienen proceso asignado
-          (tp.proceso_id IS NULL)
+        -- Tiempos que NO están asociados a ninguna dependencia específica
+        -- Excluir tiempos que tienen proceso con dependencia (directo o por fallback)
+        AND NOT (
+          -- Tiene proceso directo con dependencia asignada
+          (tp.proceso_id IS NOT NULL AND p.id IS NOT NULL AND p.dependencia_id IS NOT NULL)
           OR
-          -- O tienen proceso pero el proceso no tiene dependencia asignada
-          (tp.proceso_id IS NOT NULL AND (p.id IS NULL OR p.dependencia_id IS NULL))
-        )
-        -- Y no tienen actividad de fallback con proceso que tenga dependencia
-        AND (
-          ac_fallback.id IS NULL
-          OR pr_fallback.id IS NULL
-          OR pr_fallback.dependencia_id IS NULL
+          -- O tiene proceso de fallback con dependencia asignada
+          (pr_fallback.id IS NOT NULL AND pr_fallback.dependencia_id IS NOT NULL)
         )
         -- Verificar que el procedimiento esté en la estructura
         AND EXISTS (
