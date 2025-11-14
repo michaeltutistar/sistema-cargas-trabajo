@@ -1487,13 +1487,13 @@ app.get('/api/cargas/tiempos/procedimientos-sin-dependencia/:estructuraId', veri
       LEFT JOIN procesos pr_fallback ON ac_fallback.proceso_id = pr_fallback.id
       WHERE tp.activo = 1 
         AND tp.estructura_id = ?
-        -- Tiempos que NO tienen proceso asignado (ni directo ni fallback)
-        -- Solo incluir tiempos que realmente no tienen proceso/actividad asignado
-        AND tp.proceso_id IS NULL
-        AND (
-          pr.actividad_id IS NULL
-          OR ac_fallback.id IS NULL
-          OR pr_fallback.id IS NULL
+        -- Tiempos que tienen proceso asignado pero el proceso NO tiene dependencia_id
+        -- Esto incluye casos como "Gestión Estratégica" que tiene proceso pero sin dependencia asignada
+        AND tp.proceso_id IS NOT NULL
+        AND EXISTS (
+          SELECT 1 FROM procesos p_check 
+          WHERE p_check.id = tp.proceso_id 
+          AND p_check.dependencia_id IS NULL
         )
         -- Verificar que el procedimiento esté en la estructura
         AND EXISTS (
