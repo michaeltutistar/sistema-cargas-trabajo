@@ -1209,6 +1209,16 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
     const estructuraId = dependenciaInfo[0].estructura_id;
     console.log(`Estructura ID para dependencia ${dependenciaId}: ${estructuraId}`);
     
+    // Verificar cuántos procesos tiene esta dependencia
+    const [procesosDependencia] = await pool.query(
+      'SELECT id, nombre FROM procesos WHERE dependencia_id = ? AND activo = 1',
+      [dependenciaId]
+    );
+    console.log(`📊 Procesos encontrados para dependencia ${dependenciaId}:`, procesosDependencia.length);
+    procesosDependencia.forEach((p: any) => {
+      console.log(`   - ${p.nombre} (ID: ${p.id})`);
+    });
+    
     // Buscar procedimientos que tengan tiempos registrados y estén asociados a la dependencia y estructura
     // Usamos GROUP BY tp.id para evitar duplicados causados por múltiples JOINs
     const [procedimientos] = await pool.query(
@@ -1379,6 +1389,13 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
     );
     
     console.log('Procedimientos encontrados:', procedimientos.length);
+    
+    // Log de procesos únicos encontrados
+    const procesosUnicos = new Set(procedimientos.map((p: any) => p.proceso_nombre).filter(Boolean));
+    console.log(`📊 Procesos únicos en resultados: ${procesosUnicos.size}`);
+    procesosUnicos.forEach((nombre: string) => {
+      console.log(`   - ${nombre}`);
+    });
     
     res.json({ success: true, data: procedimientos });
   } catch (error) {
