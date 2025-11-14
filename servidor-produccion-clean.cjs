@@ -1215,7 +1215,7 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
       [dependenciaId]
     );
     console.log(`📊 Procesos encontrados para dependencia ${dependenciaId}:`, procesosDependencia.length);
-    procesosDependencia.forEach((p: any) => {
+    procesosDependencia.forEach((p) => {
       console.log(`   - ${p.nombre} (ID: ${p.id})`);
     });
     
@@ -1391,9 +1391,9 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
     console.log('Procedimientos encontrados:', procedimientos.length);
     
     // Log de procesos únicos encontrados
-    const procesosUnicos = new Set(procedimientos.map((p: any) => p.proceso_nombre).filter(Boolean));
+    const procesosUnicos = new Set(procedimientos.map((p) => p.proceso_nombre).filter(Boolean));
     console.log(`📊 Procesos únicos en resultados: ${procesosUnicos.size}`);
-    procesosUnicos.forEach((nombre: string) => {
+    procesosUnicos.forEach((nombre) => {
       console.log(`   - ${nombre}`);
     });
     
