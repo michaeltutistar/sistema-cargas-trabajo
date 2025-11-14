@@ -1312,6 +1312,13 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
           OR 
           -- O usar el proceso de la actividad de fallback si pertenece a la dependencia
           (pr_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ?)
+          OR
+          -- También incluir si el proceso directo existe pero el JOIN falló (por seguridad)
+          (tp.proceso_id IS NOT NULL AND EXISTS (
+            SELECT 1 FROM procesos p_check 
+            WHERE p_check.id = tp.proceso_id 
+            AND p_check.dependencia_id = ?
+          ))
         )
       GROUP BY tp.id, pr.id, pr.nombre, pr.descripcion, tp.frecuencia_mensual, 
                tp.tiempo_estandar, tp.tiempo_minimo, tp.tiempo_promedio, tp.tiempo_maximo,
