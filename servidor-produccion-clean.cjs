@@ -1354,15 +1354,17 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
         dependenciaId,
         // CASE actividad_descripcion - Prioridad 2 (línea 1285)
         dependenciaId,
-        // WHERE tp.estructura_id (línea 1289)
+        // WHERE tp.estructura_id (línea 1301)
         estructuraId,
-        // EXISTS ee_proc.estructura_id (línea 1295)
+        // EXISTS ee_proc.estructura_id (línea 1307)
         estructuraId,
-        // WHERE filtro dependencia (líneas 1299, 1302, 1305)
-        dependenciaId, dependenciaId, dependenciaId,
-        // ORDER BY CASE proceso - Prioridad 2 (línea 1317)
+        // WHERE filtro dependencia - proceso directo (línea 1311)
         dependenciaId,
-        // ORDER BY CASE actividad - Prioridad 2 (línea 1324)
+        // WHERE filtro dependencia - proceso fallback (línea 1314)
+        dependenciaId,
+        // ORDER BY CASE proceso - Prioridad 2 (línea 1332)
+        dependenciaId,
+        // ORDER BY CASE actividad - Prioridad 2 (línea 1341)
         dependenciaId
       ]
     );
