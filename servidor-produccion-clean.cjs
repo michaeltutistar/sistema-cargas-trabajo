@@ -1369,6 +1369,8 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
         dependenciaId,
         // WHERE filtro dependencia - proceso fallback (línea 1314)
         dependenciaId,
+        // WHERE filtro dependencia - EXISTS proceso directo (línea 1320)
+        dependenciaId,
         // ORDER BY CASE proceso - Prioridad 2 (línea 1332)
         dependenciaId,
         // ORDER BY CASE actividad - Prioridad 2 (línea 1341)
