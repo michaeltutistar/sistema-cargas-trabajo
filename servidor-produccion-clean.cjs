@@ -1331,6 +1331,14 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
             WHERE ac_check.id = pr.actividad_id
             AND pr_check.dependencia_id = ?
           )
+          OR
+          -- También incluir tiempos que tienen proceso asignado pero el proceso no tiene dependencia_id
+          -- (esto captura casos como "Gestión Estratégica" que tiene proceso pero sin dependencia asignada)
+          (tp.proceso_id IS NOT NULL AND EXISTS (
+            SELECT 1 FROM procesos p_check 
+            WHERE p_check.id = tp.proceso_id 
+            AND p_check.dependencia_id IS NULL
+          ))
         )
       GROUP BY tp.id, pr.id, pr.nombre, pr.descripcion, tp.frecuencia_mensual, 
                tp.tiempo_estandar, tp.tiempo_minimo, tp.tiempo_promedio, tp.tiempo_maximo,
@@ -1487,14 +1495,13 @@ app.get('/api/cargas/tiempos/procedimientos-sin-dependencia/:estructuraId', veri
       LEFT JOIN procesos pr_fallback ON ac_fallback.proceso_id = pr_fallback.id
       WHERE tp.activo = 1 
         AND tp.estructura_id = ?
-        -- Tiempos que NO están asociados a ninguna dependencia específica
-        -- Excluir tiempos que tienen proceso con dependencia (directo o por fallback)
-        AND NOT (
-          -- Tiene proceso directo con dependencia asignada
-          (tp.proceso_id IS NOT NULL AND p.id IS NOT NULL AND p.dependencia_id IS NOT NULL)
-          OR
-          -- O tiene proceso de fallback con dependencia asignada
-          (pr_fallback.id IS NOT NULL AND pr_fallback.dependencia_id IS NOT NULL)
+        -- Tiempos que NO tienen proceso asignado (ni directo ni fallback)
+        -- Solo incluir tiempos que realmente no tienen proceso/actividad asignado
+        AND tp.proceso_id IS NULL
+        AND (
+          pr.actividad_id IS NULL
+          OR ac_fallback.id IS NULL
+          OR pr_fallback.id IS NULL
         )
         -- Verificar que el procedimiento esté en la estructura
         AND EXISTS (
