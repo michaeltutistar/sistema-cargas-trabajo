@@ -41,6 +41,8 @@ const mysql = require('mysql2/promise');
       database: dbConfig.database
     });
 
+    const pool = mysql.createPool(dbConfig);
+    
     console.log('🔍 Verificando tiempos de la estructura INDUMIL...\n');
 
     // 1. Buscar el ID de la estructura INDUMIL
