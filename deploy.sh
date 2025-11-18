@@ -118,7 +118,14 @@ echo "==> Iniciando/recargando PM2 (${PM2_APP})"
 if pm2 describe "${PM2_APP}" >/dev/null 2>&1; then
   pm2 reload "${PM2_APP}"
 else
-  pm2 start "${ECOSYSTEM}" --env production
+  # Intentar usar ecosystem.config.js si existe, sino usar comando directo
+  if [ -f "${ECOSYSTEM}" ]; then
+    echo "==> Usando ecosystem.config.js"
+    pm2 start "${ECOSYSTEM}" --env production
+  else
+    echo "==> Ecosystem no encontrado, iniciando directamente"
+    pm2 start servidor-produccion-clean.cjs --name "${PM2_APP}" --env production
+  fi
 fi
 
 # 6) Mostrar estado

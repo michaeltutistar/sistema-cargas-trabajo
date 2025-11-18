@@ -69,16 +69,29 @@ export class EstructuraModel extends BaseModel<Estructura> {
   async crearEstructura(datos: CrearEstructuraDTO): Promise<Estructura> {
     const id = uuidv4();
     
-    await db.query(`
-      INSERT INTO estructuras (id, nombre, descripcion, usuario_creador_id)
-      VALUES (?, ?, ?, ?)
-    `, [id, datos.nombre, datos.descripcion || null, datos.usuarioCreadorId]);
+    console.log('📝 EstructuraModel.crearEstructura - Datos:', { id, nombre: datos.nombre, descripcion: datos.descripcion, usuarioCreadorId: datos.usuarioCreadorId });
+    
+    try {
+      const [result] = await db.query(`
+        INSERT INTO estructuras (id, nombre, descripcion, usuario_creador_id)
+        VALUES (?, ?, ?, ?)
+      `, [id, datos.nombre, datos.descripcion || null, datos.usuarioCreadorId]);
 
-    const estructura = await this.buscarPorId(id);
-    if (!estructura) {
-      throw new Error('Error al crear la estructura');
+      console.log('✅ Estructura insertada correctamente, resultado:', result);
+
+      const estructura = await this.buscarPorId(id);
+      if (!estructura) {
+        throw new Error('Error al crear la estructura: no se pudo recuperar después de la inserción');
+      }
+      return estructura;
+    } catch (error: any) {
+      console.error('❌ Error en crearEstructura:', error);
+      console.error('❌ Error code:', error?.code);
+      console.error('❌ Error errno:', error?.errno);
+      console.error('❌ Error sqlMessage:', error?.sqlMessage);
+      console.error('❌ Error sql:', error?.sql);
+      throw error;
     }
-    return estructura;
   }
 
   /**
@@ -101,16 +114,26 @@ export class EstructuraModel extends BaseModel<Estructura> {
    * Obtener estructura por nombre
    */
   async buscarPorNombre(nombre: string): Promise<Estructura | null> {
-    const [rows] = await db.query(
-      'SELECT * FROM estructuras WHERE nombre = ?',
-      [nombre]
-    );
+    try {
+      const [rows] = await db.query(
+        'SELECT * FROM estructuras WHERE nombre = ?',
+        [nombre]
+      );
 
-    if ((rows as any[]).length === 0) {
-      return null;
+      if ((rows as any[]).length === 0) {
+        return null;
+      }
+
+      return this.mapearResultado((rows as any[])[0]);
+    } catch (error: any) {
+      console.error('❌ Error en buscarPorNombre:', error);
+      // Si la tabla no existe, retornar null en lugar de lanzar error
+      if (error?.code === 'ER_NO_SUCH_TABLE') {
+        console.warn('⚠️ Tabla estructuras no existe aún');
+        return null;
+      }
+      throw error;
     }
-
-    return this.mapearResultado((rows as any[])[0]);
   }
 
   /**

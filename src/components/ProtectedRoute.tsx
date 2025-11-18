@@ -8,15 +8,18 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { user, isLoading } = useAuth();
+  const { user, token, isLoading } = useAuth();
   const location = useLocation();
 
-  if (isLoading) {
+  // Mientras verificamos el estado de autenticación o aún estamos resolviendo el usuario, mostrar loader
+  if (isLoading || (token && !user)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600" />
-          <p className="mt-2 text-gray-600">Verificando autenticación...</p>
+          <p className="mt-2 text-gray-600">
+            {token ? 'Cargando sesión...' : 'Verificando autenticación...'}
+          </p>
         </div>
       </div>
     );

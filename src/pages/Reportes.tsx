@@ -240,44 +240,116 @@ const Reportes: React.FC = () => {
                 ? String(proc.id)
                 : `${proc.procedimiento_id || ''}_${proc.proceso_id || ''}_${proc.actividad_id || ''}_${proc.empleo_id || ''}_${proc.frecuencia_mensual || ''}_${proc.tiempo_estandar || ''}`;
             
-            // Si no existe, agregarlo. Si existe, mantener el primero (ya agregado)
+            // Si no existe, agregarlo
             if (!tiemposVistos.has(tiempoId)) {
               tiemposVistos.set(tiempoId, proc);
               procedimientosCombinados.push(proc);
               totalAgregados++;
             } else {
-              // Log para debug si encontramos un duplicado
+              // Si existe un duplicado, verificar si el nuevo tiene proceso/actividad y el existente no
               const existente = tiemposVistos.get(tiempoId);
-              totalDuplicados++;
-              console.log('⚠️ Duplicado detectado y omitido:', {
-                tiempoId,
-                nuevo: {
-                  procedimiento: proc.nombre,
-                  procedimiento_id: proc.procedimiento_id,
-                  proceso_id: proc.proceso_id,
-                  actividad_id: proc.actividad_id,
-                  tiempo_id: proc.tiempo_id,
-                  id: proc.id
-                },
-                existente: {
-                  procedimiento: existente?.nombre,
-                  procedimiento_id: existente?.procedimiento_id,
-                  proceso_id: existente?.proceso_id,
-                  actividad_id: existente?.actividad_id,
-                  tiempo_id: existente?.tiempo_id,
-                  id: existente?.id
-                }
+              const existenteIndex = procedimientosCombinados.findIndex(p => {
+                const pTiempoId = p.tiempo_id ? String(p.tiempo_id) : p.id ? String(p.id) : '';
+                return pTiempoId === tiempoId;
               });
+              
+              // Verificar si el nuevo tiene proceso/actividad y el existente no
+              const nuevoTieneProceso = proc.proceso_id || proc.proceso_nombre;
+              const nuevoTieneActividad = proc.actividad_id || proc.actividad_nombre;
+              const existenteTieneProceso = existente?.proceso_id || existente?.proceso_nombre;
+              const existenteTieneActividad = existente?.actividad_id || existente?.actividad_nombre;
+              
+              const nuevoTieneInfo = nuevoTieneProceso || nuevoTieneActividad;
+              const existenteTieneInfo = existenteTieneProceso || existenteTieneActividad;
+              
+              // Si el nuevo tiene proceso/actividad y el existente no, reemplazar
+              if (nuevoTieneInfo && !existenteTieneInfo) {
+                if (existenteIndex !== -1) {
+                  procedimientosCombinados[existenteIndex] = proc;
+                  tiemposVistos.set(tiempoId, proc);
+                  console.log('✅ Reemplazado registro sin proceso/actividad por uno con proceso/actividad:', {
+                    tiempoId,
+                    procedimiento: proc.nombre
+                  });
+                }
+              } else {
+                // Si ambos tienen o ambos no tienen, mantener el primero (omitir el nuevo)
+                totalDuplicados++;
+                console.log('⚠️ Duplicado detectado y omitido:', {
+                  tiempoId,
+                  nuevo: {
+                    procedimiento: proc.nombre,
+                    proceso: proc.proceso_nombre || 'Sin proceso',
+                    actividad: proc.actividad_nombre || 'Sin actividad'
+                  },
+                  existente: {
+                    procedimiento: existente?.nombre,
+                    proceso: existente?.proceso_nombre || 'Sin proceso',
+                    actividad: existente?.actividad_nombre || 'Sin actividad'
+                  }
+                });
+              }
             }
           }
+        }
+        
+        // Filtro final: eliminar registros sin proceso/actividad si hay otro con el mismo tiempo_id que sí tiene
+        const tiemposConInfo = new Map<string | number, any>();
+        const tiemposSinInfo: any[] = [];
+        
+        for (const proc of procedimientosCombinados) {
+          const tiempoId = proc.tiempo_id ? String(proc.tiempo_id) : proc.id ? String(proc.id) : '';
+          const tieneProceso = proc.proceso_id || proc.proceso_nombre;
+          const tieneActividad = proc.actividad_id || proc.actividad_nombre;
+          const tieneInfo = tieneProceso || tieneActividad;
+          
+          if (tieneInfo) {
+            tiemposConInfo.set(tiempoId, proc);
+          } else {
+            tiemposSinInfo.push({ tiempoId, proc });
+          }
+        }
+        
+        // Filtrar: mantener solo los que tienen info, o los que no tienen info pero no hay otro con el mismo tiempo_id que sí tenga
+        const procedimientosFinales = procedimientosCombinados.filter(proc => {
+          const tiempoId = proc.tiempo_id ? String(proc.tiempo_id) : proc.id ? String(proc.id) : '';
+          const tieneProceso = proc.proceso_id || proc.proceso_nombre;
+          const tieneActividad = proc.actividad_id || proc.actividad_nombre;
+          const tieneInfo = tieneProceso || tieneActividad;
+          
+          // Si tiene info, mantenerlo
+          if (tieneInfo) {
+            return true;
+          }
+          
+          // Si no tiene info, mantenerlo solo si no hay otro con el mismo tiempo_id que sí tenga info
+          // PERO si hay otro con el mismo tiempo_id que sí tiene info, eliminar este
+          if (tiemposConInfo.has(tiempoId)) {
+            return false;
+          }
+          
+          // Si no hay otro con el mismo tiempo_id, mantenerlo solo si realmente no tiene proceso/actividad
+          // (esto puede pasar si el tiempo realmente no tiene proceso/actividad asignado)
+          return true;
+        });
+        
+        const eliminadosSinInfo = procedimientosCombinados.length - procedimientosFinales.length;
+        if (eliminadosSinInfo > 0) {
+          console.log(`🧹 Filtro final: eliminados ${eliminadosSinInfo} registros sin proceso/actividad que tenían duplicados con info`);
         }
         
         console.log(`📊 Deduplicación completa:`);
         console.log(`   - Total items antes: ${totalAntesDedup}`);
         console.log(`   - Total agregados: ${totalAgregados}`);
         console.log(`   - Total duplicados omitidos: ${totalDuplicados}`);
-        console.log(`   - Total final: ${procedimientosCombinados.length}`);
+        console.log(`   - Total después de deduplicación: ${procedimientosCombinados.length}`);
+        console.log(`   - Total después de filtro final: ${procedimientosFinales.length}`);
+        console.log(`   - Registros eliminados sin proceso/actividad: ${eliminadosSinInfo}`);
         console.log(`📊 Tiempos únicos por tiempo_id:`, Array.from(tiemposVistos.keys()).slice(0, 20), `... (total: ${tiemposVistos.size})`);
+        
+        // Actualizar la lista final
+        procedimientosCombinados.length = 0;
+        procedimientosCombinados.push(...procedimientosFinales);
         
         // Verificar si hay tiempos sin dependencia que se perdieron
         if (tiemposSinDependenciaData && tiemposSinDependenciaData.length > 0) {

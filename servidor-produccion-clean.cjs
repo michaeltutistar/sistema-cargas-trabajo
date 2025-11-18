@@ -1,4 +1,4 @@
-/**
+ /**
  * SERVIDOR INTEGRADO PARA PRODUCCION
  * Sistema de Gestion de Cargas de Trabajo
  * 
@@ -12,6 +12,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const path = require('path');
 const mysql = require('mysql2/promise');
+const crypto = require('crypto');
 require('dotenv').config({ path: '.env' });
 
 console.log('🚀 Iniciando Servidor Integrado de Producción con MySQL...');
@@ -1208,6 +1209,16 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
     const estructuraId = dependenciaInfo[0].estructura_id;
     console.log(`Estructura ID para dependencia ${dependenciaId}: ${estructuraId}`);
     
+    // Verificar cuántos procesos tiene esta dependencia
+    const [procesosDependencia] = await pool.query(
+      'SELECT id, nombre FROM procesos WHERE dependencia_id = ? AND activo = 1',
+      [dependenciaId]
+    );
+    console.log(`📊 Procesos encontrados para dependencia ${dependenciaId}:`, procesosDependencia.length);
+    procesosDependencia.forEach((p) => {
+      console.log(`   - ${p.nombre} (ID: ${p.id})`);
+    });
+    
     // Buscar procedimientos que tengan tiempos registrados y estén asociados a la dependencia y estructura
     // Usamos GROUP BY tp.id para evitar duplicados causados por múltiples JOINs
     const [procedimientos] = await pool.query(
@@ -1230,12 +1241,62 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
         tp.horas_contratista,
         tp.horas_trabajador_oficial,
         tp.observaciones,
-        COALESCE(tp.proceso_id, MAX(pr_fallback.id)) as proceso_id,
-        COALESCE(MAX(p.nombre), MAX(pr_fallback.nombre)) as proceso_nombre,
-        COALESCE(MAX(p.descripcion), MAX(pr_fallback.descripcion)) as proceso_descripcion,
-        COALESCE(tp.actividad_id, MAX(ac_fallback.id)) as actividad_id,
-        COALESCE(MAX(ac.nombre), MAX(ac_fallback.nombre)) as actividad_nombre,
-        COALESCE(MAX(ac.descripcion), MAX(ac_fallback.descripcion)) as actividad_descripcion,
+        -- Usar proceso directo si existe (prioridad), sino usar fallback
+        CASE 
+          -- Prioridad 1: Proceso directo si existe
+          WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL THEN tp.proceso_id
+          -- Prioridad 2: Proceso de fallback si existe y pertenece a la dependencia
+          WHEN pr_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN pr_fallback.id
+          -- Prioridad 3: Proceso de fallback si existe (aunque no pertenezca a la dependencia)
+          WHEN pr_fallback.id IS NOT NULL THEN pr_fallback.id
+          ELSE NULL
+        END as proceso_id,
+        CASE 
+          -- Prioridad 1: Proceso directo si existe
+          WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL THEN p.nombre
+          -- Prioridad 2: Proceso de fallback si existe y pertenece a la dependencia
+          WHEN pr_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN pr_fallback.nombre
+          -- Prioridad 3: Proceso de fallback si existe (aunque no pertenezca a la dependencia)
+          WHEN pr_fallback.id IS NOT NULL THEN pr_fallback.nombre
+          ELSE NULL
+        END as proceso_nombre,
+        CASE 
+          -- Prioridad 1: Proceso directo si existe
+          WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL THEN p.descripcion
+          -- Prioridad 2: Proceso de fallback si existe y pertenece a la dependencia
+          WHEN pr_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN pr_fallback.descripcion
+          -- Prioridad 3: Proceso de fallback si existe (aunque no pertenezca a la dependencia)
+          WHEN pr_fallback.id IS NOT NULL THEN pr_fallback.descripcion
+          ELSE NULL
+        END as proceso_descripcion,
+        -- Usar actividad directa si existe (prioridad), sino usar fallback
+        CASE 
+          -- Prioridad 1: Actividad directa si existe
+          WHEN tp.actividad_id IS NOT NULL AND ac.id IS NOT NULL THEN tp.actividad_id
+          -- Prioridad 2: Actividad de fallback si existe y su proceso pertenece a la dependencia
+          WHEN ac_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN ac_fallback.id
+          -- Prioridad 3: Actividad de fallback si existe (aunque su proceso no pertenezca a la dependencia)
+          WHEN ac_fallback.id IS NOT NULL THEN ac_fallback.id
+          ELSE NULL
+        END as actividad_id,
+        CASE 
+          -- Prioridad 1: Actividad directa si existe
+          WHEN tp.actividad_id IS NOT NULL AND ac.id IS NOT NULL THEN ac.nombre
+          -- Prioridad 2: Actividad de fallback si existe y su proceso pertenece a la dependencia
+          WHEN ac_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN ac_fallback.nombre
+          -- Prioridad 3: Actividad de fallback si existe (aunque su proceso no pertenezca a la dependencia)
+          WHEN ac_fallback.id IS NOT NULL THEN ac_fallback.nombre
+          ELSE NULL
+        END as actividad_nombre,
+        CASE 
+          -- Prioridad 1: Actividad directa si existe
+          WHEN tp.actividad_id IS NOT NULL AND ac.id IS NOT NULL THEN ac.descripcion
+          -- Prioridad 2: Actividad de fallback si existe y su proceso pertenece a la dependencia
+          WHEN ac_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN ac_fallback.descripcion
+          -- Prioridad 3: Actividad de fallback si existe (aunque su proceso no pertenezca a la dependencia)
+          WHEN ac_fallback.id IS NOT NULL THEN ac_fallback.descripcion
+          ELSE NULL
+        END as actividad_descripcion,
         COALESCE(MAX(CONCAT(u.nombre, ' ', u.apellido)), MAX(u.email)) as usuario_registra,
         DATE_FORMAT(MAX(tp.fecha_creacion), '%Y-%m-%d') as fecha_registro
       FROM tiempos_procedimientos tp
@@ -1256,30 +1317,101 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
           AND ee_proc.estructura_id = ?
         )
         AND (
-          -- Filtrar por dependencia: el proceso debe pertenecer a la dependencia seleccionada
-          (tp.proceso_id IS NOT NULL AND p.dependencia_id = ?)
-          OR 
-          -- O si no hay proceso directo, usar el proceso de la actividad de fallback
-          (tp.proceso_id IS NULL AND ac_fallback.proceso_id IS NOT NULL AND pr_fallback.dependencia_id = ?)
-          -- NOTA: Los tiempos sin proceso/actividad NO aparecen aquí para evitar duplicados
-          -- cuando se consulta por dependencia específica. Estos tiempos se manejan
-          -- en el frontend cuando se selecciona "todas las dependencias"
+          -- Incluir tiempos cuyo proceso directo pertenece a la dependencia
+          EXISTS (
+            SELECT 1 FROM procesos p_check 
+            WHERE p_check.id = tp.proceso_id 
+            AND p_check.dependencia_id = ?
+          )
+          OR
+          -- O incluir tiempos cuyo proceso de fallback (a través de la actividad del procedimiento) pertenece a la dependencia
+          EXISTS (
+            SELECT 1 FROM actividades ac_check
+            INNER JOIN procesos pr_check ON ac_check.proceso_id = pr_check.id
+            WHERE ac_check.id = pr.actividad_id
+            AND pr_check.dependencia_id = ?
+          )
         )
       GROUP BY tp.id, pr.id, pr.nombre, pr.descripcion, tp.frecuencia_mensual, 
                tp.tiempo_estandar, tp.tiempo_minimo, tp.tiempo_promedio, tp.tiempo_maximo,
                tp.horas_directivo, tp.horas_asesor, tp.horas_profesional, tp.horas_tecnico,
                tp.horas_asistencial, tp.grado, e.grado, tp.horas_contratista, 
-               tp.horas_trabajador_oficial, tp.observaciones, tp.proceso_id, tp.actividad_id
-      ORDER BY COALESCE(MAX(p.nombre), MAX(pr_fallback.nombre)), COALESCE(MAX(ac.nombre), MAX(ac_fallback.nombre)), pr.nombre`,
-      [estructuraId, estructuraId, dependenciaId, dependenciaId]
+               tp.horas_trabajador_oficial, tp.observaciones, tp.proceso_id, tp.actividad_id,
+               p.dependencia_id, p.nombre, p.descripcion, ac.nombre, ac.descripcion,
+               pr_fallback.id, pr_fallback.nombre, pr_fallback.descripcion,
+               ac_fallback.id, ac_fallback.nombre, ac_fallback.descripcion
+      ORDER BY 
+        CASE 
+          -- Prioridad 1: Proceso directo si existe
+          WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL THEN p.nombre
+          -- Prioridad 2: Proceso de fallback si existe y pertenece a la dependencia
+          WHEN pr_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN pr_fallback.nombre
+          -- Prioridad 3: Proceso de fallback si existe (aunque no pertenezca a la dependencia)
+          WHEN pr_fallback.id IS NOT NULL THEN pr_fallback.nombre
+          ELSE ''
+        END,
+        CASE 
+          -- Prioridad 1: Actividad directa si existe
+          WHEN tp.actividad_id IS NOT NULL AND ac.id IS NOT NULL THEN ac.nombre
+          -- Prioridad 2: Actividad de fallback si existe y su proceso pertenece a la dependencia
+          WHEN ac_fallback.id IS NOT NULL AND pr_fallback.dependencia_id = ? THEN ac_fallback.nombre
+          -- Prioridad 3: Actividad de fallback si existe (aunque su proceso no pertenezca a la dependencia)
+          WHEN ac_fallback.id IS NOT NULL THEN ac_fallback.nombre
+          ELSE ''
+        END,
+        pr.nombre`,
+      [
+        // CASE proceso_id - Prioridad 2 (línea 1239)
+        dependenciaId,
+        // CASE proceso_nombre - Prioridad 2 (línea 1248)
+        dependenciaId,
+        // CASE proceso_descripcion - Prioridad 2 (línea 1257)
+        dependenciaId,
+        // CASE actividad_id - Prioridad 2 (línea 1267)
+        dependenciaId,
+        // CASE actividad_nombre - Prioridad 2 (línea 1276)
+        dependenciaId,
+        // CASE actividad_descripcion - Prioridad 2 (línea 1285)
+        dependenciaId,
+        // WHERE tp.estructura_id (línea 1301)
+        estructuraId,
+        // EXISTS ee_proc.estructura_id (línea 1307)
+        estructuraId,
+        // WHERE filtro dependencia - EXISTS proceso directo (línea 1324)
+        dependenciaId,
+        // WHERE filtro dependencia - EXISTS proceso fallback (línea 1332)
+        dependenciaId,
+        // ORDER BY CASE proceso - Prioridad 2 (línea 1332)
+        dependenciaId,
+        // ORDER BY CASE actividad - Prioridad 2 (línea 1341)
+        dependenciaId
+      ]
     );
     
     console.log('Procedimientos encontrados:', procedimientos.length);
     
+    // Log de procesos únicos encontrados
+    const procesosUnicos = new Set(procedimientos.map((p) => p.proceso_nombre).filter(Boolean));
+    console.log(`📊 Procesos únicos en resultados: ${procesosUnicos.size}`);
+    procesosUnicos.forEach((nombre) => {
+      console.log(`   - ${nombre}`);
+    });
+    
     res.json({ success: true, data: procedimientos });
   } catch (error) {
-    console.error('Error al obtener procedimientos por dependencia:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error('❌ Error al obtener procedimientos por dependencia:', error);
+    console.error('❌ Error stack:', error?.stack);
+    console.error('❌ Error message:', error?.message);
+    console.error('❌ Error code:', error?.code);
+    console.error('❌ Error errno:', error?.errno);
+    console.error('❌ Error sqlMessage:', error?.sqlMessage);
+    console.error('❌ Error sql:', error?.sql);
+    const mensajeError = error?.sqlMessage || error?.message || 'Error interno del servidor';
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      mensaje: mensajeError,
+      detalles: error?.sqlMessage || error?.message
+    });
   }
 });
 
@@ -1311,30 +1443,57 @@ app.get('/api/cargas/tiempos/procedimientos-sin-dependencia/:estructuraId', veri
         tp.horas_contratista,
         tp.horas_trabajador_oficial,
         tp.observaciones,
-        tp.proceso_id,
-        NULL as proceso_nombre,
-        NULL as proceso_descripcion,
-        tp.actividad_id,
-        NULL as actividad_nombre,
-        NULL as actividad_descripcion,
-        COALESCE(CONCAT(u.nombre, ' ', u.apellido), u.email) as usuario_registra,
-        DATE_FORMAT(tp.fecha_creacion, '%Y-%m-%d') as fecha_registro
+        -- Usar proceso directo si existe, sino usar fallback
+        CASE 
+          WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL THEN tp.proceso_id
+          WHEN pr_fallback.id IS NOT NULL THEN pr_fallback.id
+          ELSE NULL
+        END as proceso_id,
+        CASE 
+          WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL THEN p.nombre
+          WHEN pr_fallback.id IS NOT NULL THEN pr_fallback.nombre
+          ELSE NULL
+        END as proceso_nombre,
+        CASE 
+          WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL THEN p.descripcion
+          WHEN pr_fallback.id IS NOT NULL THEN pr_fallback.descripcion
+          ELSE NULL
+        END as proceso_descripcion,
+        -- Usar actividad directa si existe, sino usar fallback
+        CASE 
+          WHEN tp.actividad_id IS NOT NULL AND ac.id IS NOT NULL THEN tp.actividad_id
+          WHEN ac_fallback.id IS NOT NULL THEN ac_fallback.id
+          ELSE NULL
+        END as actividad_id,
+        CASE 
+          WHEN tp.actividad_id IS NOT NULL AND ac.id IS NOT NULL THEN ac.nombre
+          WHEN ac_fallback.id IS NOT NULL THEN ac_fallback.nombre
+          ELSE NULL
+        END as actividad_nombre,
+        CASE 
+          WHEN tp.actividad_id IS NOT NULL AND ac.id IS NOT NULL THEN ac.descripcion
+          WHEN ac_fallback.id IS NOT NULL THEN ac_fallback.descripcion
+          ELSE NULL
+        END as actividad_descripcion,
+        COALESCE(MAX(CONCAT(u.nombre, ' ', u.apellido)), MAX(u.email)) as usuario_registra,
+        DATE_FORMAT(MAX(tp.fecha_creacion), '%Y-%m-%d') as fecha_registro
       FROM tiempos_procedimientos tp
       INNER JOIN procedimientos pr ON tp.procedimiento_id = pr.id
       LEFT JOIN empleos e ON tp.empleo_id = e.id
       LEFT JOIN usuarios u ON tp.usuario_id = u.id
       LEFT JOIN procesos p ON tp.proceso_id = p.id
+      LEFT JOIN actividades ac ON tp.actividad_id = ac.id
       LEFT JOIN actividades ac_fallback ON pr.actividad_id = ac_fallback.id
       LEFT JOIN procesos pr_fallback ON ac_fallback.proceso_id = pr_fallback.id
       WHERE tp.activo = 1 
         AND tp.estructura_id = ?
-        -- Tiempos que no tienen proceso/actividad asignado y no tienen dependencia asociada
-        AND tp.proceso_id IS NULL
-        AND (
-          -- O no tienen actividad de fallback
-          ac_fallback.id IS NULL
-          -- O la actividad de fallback no tiene proceso con dependencia
-          OR pr_fallback.dependencia_id IS NULL
+        -- Tiempos que tienen proceso asignado pero el proceso NO tiene dependencia_id
+        -- Esto incluye casos como "Gestión Estratégica" que tiene proceso pero sin dependencia asignada
+        AND tp.proceso_id IS NOT NULL
+        AND EXISTS (
+          SELECT 1 FROM procesos p_check 
+          WHERE p_check.id = tp.proceso_id 
+          AND p_check.dependencia_id IS NULL
         )
         -- Verificar que el procedimiento esté en la estructura
         AND EXISTS (
@@ -1343,8 +1502,26 @@ app.get('/api/cargas/tiempos/procedimientos-sin-dependencia/:estructuraId', veri
           AND ee_proc.tipo = 'procedimiento'
           AND ee_proc.estructura_id = ?
         )
-      GROUP BY tp.id
-      ORDER BY pr.nombre`,
+      GROUP BY tp.id, pr.id, pr.nombre, pr.descripcion, tp.frecuencia_mensual, 
+               tp.tiempo_estandar, tp.tiempo_minimo, tp.tiempo_promedio, tp.tiempo_maximo,
+               tp.horas_directivo, tp.horas_asesor, tp.horas_profesional, tp.horas_tecnico,
+               tp.horas_asistencial, tp.grado, e.grado, tp.horas_contratista, 
+               tp.horas_trabajador_oficial, tp.observaciones, tp.proceso_id, tp.actividad_id,
+               p.id, p.nombre, p.descripcion, ac.id, ac.nombre, ac.descripcion,
+               pr_fallback.id, pr_fallback.nombre, pr_fallback.descripcion,
+               ac_fallback.id, ac_fallback.nombre, ac_fallback.descripcion
+      ORDER BY 
+        CASE 
+          WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL THEN p.nombre
+          WHEN pr_fallback.id IS NOT NULL THEN pr_fallback.nombre
+          ELSE ''
+        END,
+        CASE 
+          WHEN tp.actividad_id IS NOT NULL AND ac.id IS NOT NULL THEN ac.nombre
+          WHEN ac_fallback.id IS NOT NULL THEN ac_fallback.nombre
+          ELSE ''
+        END,
+        pr.nombre`,
       [estructuraId, estructuraId]
     );
     
@@ -1352,8 +1529,19 @@ app.get('/api/cargas/tiempos/procedimientos-sin-dependencia/:estructuraId', veri
     
     res.json({ success: true, data: procedimientos });
   } catch (error) {
-    console.error('Error al obtener procedimientos sin dependencia:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error('❌ Error al obtener procedimientos sin dependencia:', error);
+    console.error('❌ Error stack:', error?.stack);
+    console.error('❌ Error message:', error?.message);
+    console.error('❌ Error code:', error?.code);
+    console.error('❌ Error errno:', error?.errno);
+    console.error('❌ Error sqlMessage:', error?.sqlMessage);
+    console.error('❌ Error sql:', error?.sql);
+    const mensajeError = error?.sqlMessage || error?.message || 'Error interno del servidor';
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      mensaje: mensajeError,
+      detalles: error?.sqlMessage || error?.message
+    });
   }
 });
 
@@ -1419,25 +1607,82 @@ app.get('/api/estructura/:id', verificarToken, async (req, res) => {
 app.post('/api/estructura', verificarToken, async (req, res) => {
   try {
     const { nombre, descripcion } = req.body;
+    const usuarioId = req.usuario?.id;
     
-    if (!nombre) {
-      return res.status(400).json({ error: 'El nombre es requerido' });
+    console.log('📝 Crear estructura - Datos recibidos:', { nombre, descripcion, usuarioId });
+    
+    if (!usuarioId) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
     }
     
+    if (!nombre) {
+      return res.status(400).json({ error: 'El nombre de la estructura es requerido' });
+    }
+    
+    // Verificar si ya existe una estructura con ese nombre
+    try {
+      const [estructurasExistentes] = await pool.query(
+        'SELECT * FROM estructuras WHERE nombre = ?',
+        [nombre]
+      );
+      
+      if (estructurasExistentes.length > 0) {
+        return res.status(400).json({ error: 'Ya existe una estructura con ese nombre' });
+      }
+    } catch (error) {
+      console.error('Error verificando estructura existente:', error);
+      // Continuar si hay error en la verificación (puede ser que la tabla no exista aún)
+    }
+    
+    // Generar UUID para el id
+    const estructuraId = crypto.randomUUID();
+    
+    console.log('📝 EstructuraModel.crearEstructura - Datos:', { 
+      id: estructuraId, 
+      nombre, 
+      descripcion, 
+      usuarioCreadorId: usuarioId 
+    });
+    
     const [result] = await pool.query(
-      'INSERT INTO estructuras (nombre, descripcion, usuario_creador_id) VALUES (?, ?, ?)',
-      [nombre, descripcion || '', req.usuario.id]
+      'INSERT INTO estructuras (id, nombre, descripcion, usuario_creador_id) VALUES (?, ?, ?, ?)',
+      [estructuraId, nombre, descripcion || null, usuarioId]
     );
+    
+    console.log('✅ Estructura insertada correctamente, resultado:', result);
     
     const [nuevaEstructura] = await pool.query(
       'SELECT * FROM estructuras WHERE id = ?',
-      [result.insertId]
+      [estructuraId]
     );
+    
+    if (nuevaEstructura.length === 0) {
+      throw new Error('Error al crear la estructura: no se pudo recuperar después de la inserción');
+    }
     
     res.status(201).json({ success: true, data: nuevaEstructura[0] });
   } catch (error) {
-    console.error('Error al crear estructura:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error('❌ Error creando estructura:', error);
+    console.error('❌ Error stack:', error?.stack);
+    console.error('❌ Error message:', error?.message);
+    console.error('❌ Error code:', error?.code);
+    console.error('❌ Error errno:', error?.errno);
+    console.error('❌ Error sqlMessage:', error?.sqlMessage);
+    console.error('❌ Error sql:', error?.sql);
+    
+    // Devolver mensaje de error más descriptivo (formato compatible con frontend)
+    const mensajeError = error?.sqlMessage || error?.message || 'Error interno del servidor';
+    res.status(500).json({ 
+      error: true,
+      mensaje: `Error al crear la estructura: ${mensajeError}`,
+      codigo: 500,
+      detalles: {
+        sqlMessage: error?.sqlMessage,
+        message: error?.message,
+        code: error?.code,
+        sql: error?.sql
+      }
+    });
   }
 });
 
