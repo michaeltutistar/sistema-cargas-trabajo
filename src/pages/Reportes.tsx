@@ -535,23 +535,6 @@ const Reportes: React.FC = () => {
           'Fecha Registro': proc.fecha_registro || ''
         };
       });
-        'Frecuencia Mensual': parseFloat(String(proc.frecuencia_mensual)) || 0,
-        'Tiempo Mínimo (hrs)': parseFloat(String(proc.tiempo_minimo)) || 0,
-        'Tiempo Promedio (hrs)': parseFloat(String(proc.tiempo_promedio)) || 0,
-        'Tiempo Máximo (hrs)': parseFloat(String(proc.tiempo_maximo)) || 0,
-        'Tiempo Estándar (hrs)': parseFloat(String(proc.tiempo_estandar)) || 0,
-        'Horas Directivo': parseFloat(String(proc.horas_directivo)) || 0,
-        'Horas Asesor': parseFloat(String(proc.horas_asesor)) || 0,
-        'Horas Profesional': parseFloat(String(proc.horas_profesional)) || 0,
-        'Horas Técnico': parseFloat(String(proc.horas_tecnico)) || 0,
-        'Horas Asistencial': parseFloat(String(proc.horas_asistencial)) || 0,
-        'Grado': proc.grado || '',
-        'Horas Contratista': parseFloat(String(proc.horas_contratista)) || 0,
-        'Horas Trabajador Oficial': parseFloat(String(proc.horas_trabajador_oficial)) || 0,
-        'Observaciones': proc.observaciones || '',
-        'Usuario': proc.usuario_registra || '',
-        'Fecha Registro': proc.fecha_registro || ''
-      }));
 
       // Agregar fila de totales
       const totalesHoras = reporteData.procedimientos.reduce((totales, proc) => {
