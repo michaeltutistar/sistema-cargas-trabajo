@@ -1219,6 +1219,13 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
       console.log(`   - ${p.nombre} (ID: ${p.id})`);
     });
     
+    // Obtener el nombre de la dependencia
+    const [dependenciaNombre] = await pool.query(
+      'SELECT nombre FROM dependencias WHERE id = ?',
+      [dependenciaId]
+    );
+    const nombreDependencia = dependenciaNombre && dependenciaNombre.length > 0 ? dependenciaNombre[0].nombre : 'Sin dependencia';
+    
     // Buscar procedimientos que tengan tiempos registrados y estén asociados a la dependencia y estructura
     // Usamos GROUP BY tp.id para evitar duplicados causados por múltiples JOINs
     const [procedimientos] = await pool.query(
@@ -1241,6 +1248,7 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
         tp.horas_contratista,
         tp.horas_trabajador_oficial,
         tp.observaciones,
+        ? as dependencia_nombre,
         -- Usar proceso directo si existe (prioridad), sino usar fallback
         CASE 
           -- Prioridad 1: Proceso directo si existe
@@ -1361,6 +1369,8 @@ app.get('/api/cargas/tiempos/procedimientos-por-dependencia/:dependenciaId', ver
         END,
         pr.nombre`,
       [
+        // dependencia_nombre (línea ~1243)
+        nombreDependencia,
         // CASE proceso_id - Prioridad 2 (línea 1239)
         dependenciaId,
         // CASE proceso_nombre - Prioridad 2 (línea 1248)
@@ -1443,6 +1453,7 @@ app.get('/api/cargas/tiempos/procedimientos-sin-dependencia/:estructuraId', veri
         tp.horas_contratista,
         tp.horas_trabajador_oficial,
         tp.observaciones,
+        'Sin dependencia' as dependencia_nombre,
         -- Usar proceso directo si existe, sino usar fallback
         CASE 
           WHEN tp.proceso_id IS NOT NULL AND p.id IS NOT NULL THEN tp.proceso_id

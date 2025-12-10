@@ -65,6 +65,7 @@ interface ProcedimientoReporte {
   actividad_id?: number;
   actividad_nombre?: string;
   actividad_descripcion?: string;
+  dependencia_nombre?: string;
   usuario_registra?: string;
   fecha_registro?: string;
 }
@@ -497,11 +498,43 @@ const Reportes: React.FC = () => {
       // Crear un nuevo libro de trabajo
       const workbook = XLSX.utils.book_new();
       
+      // Determinar si mostrar la columna de dependencia (solo cuando es "Todas las dependencias")
+      const mostrarDependencia = reporteData.dependencia.nombre === 'Todas las dependencias';
+      
       // Preparar datos para la hoja de procedimientos
-      const procedimientosData = reporteData.procedimientos.map(proc => ({
-        'Proceso': proc.proceso_nombre || 'Sin proceso',
-        'Procedimiento': proc.nombre,
-        'Actividad': proc.actividad_nombre || 'Sin actividad',
+      const procedimientosData = reporteData.procedimientos.map(proc => {
+        const baseData: any = {};
+        
+        // Agregar columna Dependencia primero si es "Todas las dependencias"
+        if (mostrarDependencia) {
+          baseData['Dependencia'] = proc.dependencia_nombre || 'Sin dependencia';
+        }
+        
+        // Luego agregar las demás columnas
+        baseData['Proceso'] = proc.proceso_nombre || 'Sin proceso';
+        baseData['Procedimiento'] = proc.nombre;
+        baseData['Actividad'] = proc.actividad_nombre || 'Sin actividad';
+        
+        return {
+          ...baseData,
+          'Frecuencia Mensual': parseFloat(String(proc.frecuencia_mensual)) || 0,
+          'Tiempo Mínimo (hrs)': parseFloat(String(proc.tiempo_minimo)) || 0,
+          'Tiempo Promedio (hrs)': parseFloat(String(proc.tiempo_promedio)) || 0,
+          'Tiempo Máximo (hrs)': parseFloat(String(proc.tiempo_maximo)) || 0,
+          'Tiempo Estándar (hrs)': parseFloat(String(proc.tiempo_estandar)) || 0,
+          'Horas Directivo': parseFloat(String(proc.horas_directivo)) || 0,
+          'Horas Asesor': parseFloat(String(proc.horas_asesor)) || 0,
+          'Horas Profesional': parseFloat(String(proc.horas_profesional)) || 0,
+          'Horas Técnico': parseFloat(String(proc.horas_tecnico)) || 0,
+          'Horas Asistencial': parseFloat(String(proc.horas_asistencial)) || 0,
+          'Grado': proc.grado || '',
+          'Horas Contratista': parseFloat(String(proc.horas_contratista)) || 0,
+          'Horas Trabajador Oficial': parseFloat(String(proc.horas_trabajador_oficial)) || 0,
+          'Observaciones': proc.observaciones || '',
+          'Usuario': proc.usuario_registra || '',
+          'Fecha Registro': proc.fecha_registro || ''
+        };
+      });
         'Frecuencia Mensual': parseFloat(String(proc.frecuencia_mensual)) || 0,
         'Tiempo Mínimo (hrs)': parseFloat(String(proc.tiempo_minimo)) || 0,
         'Tiempo Promedio (hrs)': parseFloat(String(proc.tiempo_promedio)) || 0,
@@ -552,10 +585,15 @@ const Reportes: React.FC = () => {
       };
 
       // Agregar fila de totales
+      const filaTotales: any = {};
+      if (mostrarDependencia) {
+        filaTotales['Dependencia'] = '';
+      }
+      filaTotales['Proceso'] = 'TOTALES';
+      filaTotales['Procedimiento'] = '';
+      filaTotales['Actividad'] = '';
       procedimientosData.push({
-        'Proceso': 'TOTALES',
-        'Procedimiento': '',
-        'Actividad': '',
+        ...filaTotales,
         'Frecuencia Mensual': 0,
         'Tiempo Mínimo (hrs)': 0,
         'Tiempo Promedio (hrs)': 0,
@@ -575,10 +613,15 @@ const Reportes: React.FC = () => {
       });
 
       // Agregar fila de personal requerido
+      const filaPersonal: any = {};
+      if (mostrarDependencia) {
+        filaPersonal['Dependencia'] = '';
+      }
+      filaPersonal['Proceso'] = 'PERSONAL REQUERIDO';
+      filaPersonal['Procedimiento'] = '';
+      filaPersonal['Actividad'] = '';
       procedimientosData.push({
-        'Proceso': 'PERSONAL REQUERIDO',
-        'Procedimiento': '',
-        'Actividad': '',
+        ...filaPersonal,
         'Frecuencia Mensual': 0,
         'Tiempo Mínimo (hrs)': 0,
         'Tiempo Promedio (hrs)': 0,
@@ -602,6 +645,7 @@ const Reportes: React.FC = () => {
       
       // Ajustar ancho de columnas
       const columnWidths = [
+        ...(mostrarDependencia ? [{ wch: 30 }] : []), // Dependencia (solo si es "Todas las dependencias")
         { wch: 20 }, // Proceso
         { wch: 30 }, // Procedimiento
         { wch: 20 }, // Actividad
@@ -887,6 +931,9 @@ const ReporteContent: React.FC<{ data: ReporteData }> = ({ data }) => {
             <table className="w-full border-collapse border border-gray-300">
               <thead>
                 <tr className="bg-gray-100">
+                  {data.dependencia.nombre === 'Todas las dependencias' && (
+                    <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Dependencia</th>
+                  )}
                   <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Proceso</th>
                   <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Procedimiento</th>
                   <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Actividad</th>
@@ -911,6 +958,9 @@ const ReporteContent: React.FC<{ data: ReporteData }> = ({ data }) => {
               <tbody>
                 {data.procedimientos.map((proc, index) => (
                   <tr key={`${proc.id}-${index}`} className="hover:bg-gray-50">
+                    {data.dependencia.nombre === 'Todas las dependencias' && (
+                      <td className="border border-gray-300 px-3 py-2 text-sm">{proc.dependencia_nombre || 'Sin dependencia'}</td>
+                    )}
                     <td className="border border-gray-300 px-3 py-2 text-sm">{proc.proceso_nombre || 'Sin proceso'}</td>
                     <td className="border border-gray-300 px-3 py-2 text-sm">{proc.nombre}</td>
                     <td className="border border-gray-300 px-3 py-2 text-sm">{proc.actividad_nombre || 'Sin actividad'}</td>
@@ -934,7 +984,7 @@ const ReporteContent: React.FC<{ data: ReporteData }> = ({ data }) => {
                 ))}
                 {/* Fila de totales */}
                 <tr className="bg-blue-50 font-semibold">
-                  <td className="border border-gray-300 px-3 py-2 text-sm font-bold" colSpan={8}>
+                  <td className="border border-gray-300 px-3 py-2 text-sm font-bold" colSpan={data.dependencia.nombre === 'Todas las dependencias' ? 9 : 8}>
                     <span className="text-blue-700">TOTALES</span>
                   </td>
                   <td className="border border-gray-300 px-3 py-2 text-sm text-center font-bold text-blue-700">
@@ -963,7 +1013,7 @@ const ReporteContent: React.FC<{ data: ReporteData }> = ({ data }) => {
                 </tr>
                 {/* Fila de personal requerido */}
                 <tr className="bg-green-50 font-semibold">
-                  <td className="border border-gray-300 px-3 py-2 text-sm font-bold" colSpan={8}>
+                  <td className="border border-gray-300 px-3 py-2 text-sm font-bold" colSpan={data.dependencia.nombre === 'Todas las dependencias' ? 9 : 8}>
                     <span className="text-green-700">Total Personal Requerido</span>
                   </td>
                   <td className="border border-gray-300 px-3 py-2 text-sm text-center font-bold text-green-700">
