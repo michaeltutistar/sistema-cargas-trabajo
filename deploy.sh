@@ -1,5 +1,7 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/bash
+set -e
+set -u
+set -o pipefail || true
 
 # Uso: ./deploy.sh [branch] [--skip-backup]
 # Variables opcionales:
