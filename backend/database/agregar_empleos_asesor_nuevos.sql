@@ -29,3 +29,4 @@ INSERT IGNORE INTO `empleos` (`id`, `codigo`, `nombre`, `nivel_jerarquico`, `den
 -- SELECT COUNT(*) as total_asesores FROM empleos WHERE nivel_jerarquico = 'ASESOR';
 -- SELECT * FROM empleos WHERE nivel_jerarquico = 'ASESOR' ORDER BY codigo;
 
+

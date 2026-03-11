@@ -61,3 +61,4 @@ INSERT IGNORE INTO `empleos` (`id`, `codigo`, `nombre`, `nivel_jerarquico`, `den
 -- SELECT COUNT(*) as total_asistenciales FROM empleos WHERE nivel_jerarquico = 'ASISTENCIAL';
 -- SELECT * FROM empleos WHERE nivel_jerarquico = 'ASISTENCIAL' ORDER BY codigo;
 
+

@@ -115,6 +115,14 @@ const menuConfig = {
       icon: Clock,
       path: '/tiempos'
     }
+  ],
+  estructura: [
+    {
+      id: 'estructura',
+      label: 'Gestión de Estructura',
+      icon: Building,
+      path: '/estructura'
+    }
   ]
 };
 
@@ -139,6 +147,10 @@ const Layout: React.FC = () => {
   const getMenuItems = () => {
     if (!user) return [];
     
+    if (user.rol === 'estructura') {
+      return menuConfig.estructura;
+    }
+
     // Si el email es específico para tiempos, usar menú restrictivo
     if (user.email === 'tiempos@cargas-trabajo.gov.co') {
       return menuConfig.tiempos;

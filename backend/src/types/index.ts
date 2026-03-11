@@ -16,7 +16,7 @@ export interface Usuario {
   password: string;
   nombre: string;
   apellido: string;
-  rol: 'admin' | 'usuario' | 'consulta' | 'tiempos';
+  rol: 'admin' | 'usuario' | 'consulta' | 'tiempos' | 'estructura';
   activo: boolean;
   fechaCreacion: Date;
   fechaActualizacion: Date;
@@ -148,7 +148,7 @@ export interface CrearUsuarioDTO {
   password: string;
   nombre: string;
   apellido: string;
-  rol: 'admin' | 'usuario' | 'consulta' | 'tiempos';
+  rol: 'admin' | 'usuario' | 'consulta' | 'tiempos' | 'estructura';
 }
 
 export interface LoginDTO {

@@ -148,14 +148,15 @@ export class AuthService {
    * Validar permisos del usuario para una acción
    */
   validarPermisos(
-    usuarioRol: 'admin' | 'usuario' | 'consulta' | 'tiempos',
+    usuarioRol: 'admin' | 'usuario' | 'consulta' | 'tiempos' | 'estructura',
     accionRequerida: 'leer' | 'escribir' | 'administrar'
   ): boolean {
     const permisos = {
       admin: ['leer', 'escribir', 'administrar'],
       usuario: ['leer', 'escribir'],
       consulta: ['leer'],
-      tiempos: ['leer', 'escribir'] // Solo para módulo de tiempos
+      tiempos: ['leer', 'escribir'], // Solo para módulo de tiempos
+      estructura: ['leer', 'escribir'] // Solo para módulo de estructura
     };
 
     return permisos[usuarioRol].includes(accionRequerida);

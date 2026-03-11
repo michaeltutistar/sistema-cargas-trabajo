@@ -17,3 +17,4 @@ INSERT INTO usuarios (id, email, password, nombre, apellido, rol, activo, fecha_
 -- Verificar que se creó correctamente
 -- SELECT id, email, nombre, apellido, rol, activo FROM usuarios WHERE email = 'pruebas@tac.com';
 
+

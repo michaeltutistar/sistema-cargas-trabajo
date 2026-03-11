@@ -65,13 +65,13 @@ const crearUsuarioSchema = z.object({
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
   nombre: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
   apellido: z.string().min(2, 'El apellido debe tener al menos 2 caracteres'),
-  rol: z.enum(['admin', 'usuario', 'consulta', 'tiempos'])
+  rol: z.enum(['admin', 'usuario', 'consulta', 'tiempos', 'estructura'])
 });
 
 const actualizarUsuarioSchema = z.object({
   nombre: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
   apellido: z.string().min(2, 'El apellido debe tener al menos 2 caracteres'),
-  rol: z.enum(['admin', 'usuario', 'consulta', 'tiempos'])
+  rol: z.enum(['admin', 'usuario', 'consulta', 'tiempos', 'estructura'])
 });
 
 type CrearUsuarioFormData = z.infer<typeof crearUsuarioSchema>;
@@ -308,7 +308,8 @@ const AdminUsuarios: React.FC = () => {
       admin: { label: 'Administrador', color: 'bg-red-100 text-red-800', icon: Shield },
       usuario: { label: 'Usuario', color: 'bg-blue-100 text-blue-800', icon: Users },
       consulta: { label: 'Consulta', color: 'bg-green-100 text-green-800', icon: Eye },
-      tiempos: { label: 'Tiempos', color: 'bg-purple-100 text-purple-800', icon: Clock }
+      tiempos: { label: 'Tiempos', color: 'bg-purple-100 text-purple-800', icon: Clock },
+      estructura: { label: 'Solo Estructura', color: 'bg-amber-100 text-amber-800', icon: FileText }
     };
     return roles[rol as keyof typeof roles] || roles.usuario;
   };
@@ -401,6 +402,7 @@ const AdminUsuarios: React.FC = () => {
                     <SelectItem value="usuario">👥 Usuario</SelectItem>
                     <SelectItem value="consulta">👁️ Consulta</SelectItem>
                     <SelectItem value="tiempos">⏰ Solo Tiempos</SelectItem>
+                    <SelectItem value="estructura">🏗️ Solo Estructura</SelectItem>
                   </SelectContent>
                 </Select>
                 {crearForm.formState.errors.rol && (
@@ -461,6 +463,7 @@ const AdminUsuarios: React.FC = () => {
                   <SelectItem value="usuario">Usuario</SelectItem>
                   <SelectItem value="consulta">Consulta</SelectItem>
                   <SelectItem value="tiempos">Solo Tiempos</SelectItem>
+                  <SelectItem value="estructura">Solo Estructura</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -686,6 +689,7 @@ const AdminUsuarios: React.FC = () => {
                   <SelectItem value="usuario">👥 Usuario</SelectItem>
                   <SelectItem value="consulta">👁️ Consulta</SelectItem>
                   <SelectItem value="tiempos">⏰ Solo Tiempos</SelectItem>
+                  <SelectItem value="estructura">🏗️ Solo Estructura</SelectItem>
                 </SelectContent>
               </Select>
               {editarForm.formState.errors.rol && (

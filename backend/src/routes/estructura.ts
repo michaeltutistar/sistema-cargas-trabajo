@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { estructuraController } from '../controllers/EstructuraController';
-import { autenticar, puedeModificar, puedeConsultar } from '../middleware/auth';
+import { autenticar, puedeGestionarEstructura, puedeConsultarEstructura } from '../middleware/auth';
 import { validarId } from '../middleware/validacion';
 
 const router = Router();
@@ -12,7 +12,7 @@ const router = Router();
  */
 router.post('/',
   autenticar(),
-  puedeModificar(),
+  puedeGestionarEstructura(),
   estructuraController.crearEstructura.bind(estructuraController)
 );
 
@@ -23,7 +23,7 @@ router.post('/',
  */
 router.get('/',
   autenticar(),
-  puedeConsultar(),
+  puedeConsultarEstructura(),
   estructuraController.listarEstructuras.bind(estructuraController)
 );
 
@@ -34,7 +34,7 @@ router.get('/',
  */
 router.get('/:id',
   autenticar(),
-  puedeConsultar(),
+  puedeConsultarEstructura(),
   validarId('id'),
   estructuraController.obtenerEstructura.bind(estructuraController)
 );
@@ -46,7 +46,7 @@ router.get('/:id',
  */
 router.put('/:id',
   autenticar(),
-  puedeModificar(),
+  puedeGestionarEstructura(),
   validarId('id'),
   estructuraController.actualizarEstructura.bind(estructuraController)
 );
@@ -58,7 +58,7 @@ router.put('/:id',
  */
 router.delete('/:id/desactivar',
   autenticar(),
-  puedeModificar(),
+  puedeGestionarEstructura(),
   validarId('id'),
   estructuraController.desactivarEstructura.bind(estructuraController)
 );
@@ -70,7 +70,7 @@ router.delete('/:id/desactivar',
  */
 router.put('/:id/activar',
   autenticar(),
-  puedeModificar(),
+  puedeGestionarEstructura(),
   validarId('id'),
   estructuraController.activarEstructura.bind(estructuraController)
 );
@@ -82,7 +82,7 @@ router.put('/:id/activar',
  */
 router.get('/:id/completa',
   autenticar(),
-  puedeConsultar(),
+  puedeConsultarEstructura(),
   validarId('id'),
   estructuraController.obtenerEstructuraCompleta.bind(estructuraController)
 );
@@ -94,7 +94,7 @@ router.get('/:id/completa',
  */
 router.post('/elemento',
   autenticar(),
-  puedeModificar(),
+  puedeGestionarEstructura(),
   estructuraController.agregarElemento.bind(estructuraController)
 );
 
@@ -105,7 +105,7 @@ router.post('/elemento',
  */
 router.delete('/elemento/:id',
   autenticar(),
-  puedeModificar(),
+  puedeGestionarEstructura(),
   validarId('id'),
   estructuraController.eliminarElemento.bind(estructuraController)
 );
@@ -117,7 +117,7 @@ router.delete('/elemento/:id',
  */
 router.get('/:estructuraId/elementos/:tipo',
   autenticar(),
-  puedeConsultar(),
+  puedeConsultarEstructura(),
   validarId('estructuraId'),
   estructuraController.obtenerElementosPorTipo.bind(estructuraController)
 );
@@ -129,7 +129,7 @@ router.get('/:estructuraId/elementos/:tipo',
  */
 router.get('/:estructuraId/dependencias',
   autenticar(),
-  puedeConsultar(),
+  puedeConsultarEstructura(),
   validarId('estructuraId'),
   estructuraController.obtenerDependenciasPorEstructura.bind(estructuraController)
 );

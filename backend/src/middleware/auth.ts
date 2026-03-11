@@ -12,7 +12,7 @@ declare global {
         email: string;
         nombre: string;
         apellido: string;
-        rol: 'admin' | 'usuario' | 'consulta';
+        rol: 'admin' | 'usuario' | 'consulta' | 'tiempos' | 'estructura';
       };
     }
   }
@@ -88,7 +88,7 @@ export function autenticar() {
 /**
  * Middleware para autorizar usuarios según roles específicos
  */
-export function autorizar(...rolesPermitidos: Array<'admin' | 'usuario' | 'consulta' | 'tiempos'>) {
+export function autorizar(...rolesPermitidos: Array<'admin' | 'usuario' | 'consulta' | 'tiempos' | 'estructura'>) {
   return (req: Request, res: Response, next: NextFunction): Response | void => {
     if (!req.usuario) {
       return res.status(401).json(generarRespuestaError(
@@ -131,6 +131,17 @@ export function puedeModificar() {
  */
 export function puedeConsultar() {
   return autorizar('admin', 'usuario', 'consulta', 'tiempos');
+}
+
+/**
+ * Middleware para sección de estructura (incluye rol dedicado)
+ */
+export function puedeGestionarEstructura() {
+  return autorizar('admin', 'usuario', 'estructura');
+}
+
+export function puedeConsultarEstructura() {
+  return autorizar('admin', 'usuario', 'consulta', 'estructura');
 }
 
 /**

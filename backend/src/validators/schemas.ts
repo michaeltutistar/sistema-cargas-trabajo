@@ -25,14 +25,14 @@ export const crearUsuarioSchema = Joi.object({
   password: passwordSchema,
   nombre: nombreSchema,
   apellido: nombreSchema,
-  rol: Joi.string().valid('admin', 'usuario', 'consulta', 'tiempos').required()
+  rol: Joi.string().valid('admin', 'usuario', 'consulta', 'tiempos', 'estructura').required()
 });
 
 export const actualizarUsuarioSchema = Joi.object({
   email: emailSchema.optional(),
   nombre: nombreSchema.optional(),
   apellido: nombreSchema.optional(),
-  rol: Joi.string().valid('admin', 'usuario', 'consulta', 'tiempos').optional(),
+  rol: Joi.string().valid('admin', 'usuario', 'consulta', 'tiempos', 'estructura').optional(),
   activo: Joi.boolean().optional()
 });
 

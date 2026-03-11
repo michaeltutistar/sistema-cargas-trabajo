@@ -49,3 +49,4 @@ INSERT IGNORE INTO `empleos` (`id`, `codigo`, `nombre`, `nivel_jerarquico`, `den
 -- SELECT COUNT(*) as total_tecnicos FROM empleos WHERE nivel_jerarquico = 'TECNICO';
 -- SELECT * FROM empleos WHERE nivel_jerarquico = 'TECNICO' ORDER BY codigo;
 
+

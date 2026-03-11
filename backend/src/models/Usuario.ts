@@ -32,7 +32,7 @@ export class UsuarioModel extends BaseModel<Usuario> {
       throw new ValidacionError('La contraseña debe tener al menos 6 caracteres');
     }
 
-    if (datos.rol && !['admin', 'usuario', 'consulta', 'tiempos'].includes(datos.rol)) {
+    if (datos.rol && !['admin', 'usuario', 'consulta', 'tiempos', 'estructura'].includes(datos.rol)) {
       throw new ValidacionError('Rol no válido');
     }
 
@@ -162,8 +162,8 @@ export class UsuarioModel extends BaseModel<Usuario> {
   /**
    * Cambiar rol de un usuario (solo admin)
    */
-  async cambiarRol(id: string, nuevoRol: 'admin' | 'usuario' | 'consulta' | 'tiempos'): Promise<Usuario> {
-    if (!['admin', 'usuario', 'consulta', 'tiempos'].includes(nuevoRol)) {
+  async cambiarRol(id: string, nuevoRol: 'admin' | 'usuario' | 'consulta' | 'tiempos' | 'estructura'): Promise<Usuario> {
+    if (!['admin', 'usuario', 'consulta', 'tiempos', 'estructura'].includes(nuevoRol)) {
       throw new ValidacionError('Rol no válido');
     }
 
@@ -180,7 +180,7 @@ export class UsuarioModel extends BaseModel<Usuario> {
   /**
    * Buscar usuarios por rol
    */
-  async buscarPorRol(rol: 'admin' | 'usuario' | 'consulta'): Promise<Usuario[]> {
+  async buscarPorRol(rol: 'admin' | 'usuario' | 'consulta' | 'tiempos' | 'estructura'): Promise<Usuario[]> {
     return this.buscarPorCampo('rol', rol);
   }
 
@@ -196,7 +196,7 @@ export class UsuarioModel extends BaseModel<Usuario> {
    */
   async buscarConFiltros(
     filtros: {
-      rol?: 'admin' | 'usuario' | 'consulta' | 'tiempos';
+      rol?: 'admin' | 'usuario' | 'consulta' | 'tiempos' | 'estructura';
       activo?: boolean;
       busqueda?: string;
     } = {},
@@ -282,6 +282,7 @@ export class UsuarioModel extends BaseModel<Usuario> {
       usuario: number;
       consulta: number;
       tiempos: number;
+      estructura: number;
     };
     ultimoRegistro: string | null;
   }> {
@@ -294,6 +295,7 @@ export class UsuarioModel extends BaseModel<Usuario> {
         SUM(CASE WHEN rol = 'usuario' THEN 1 ELSE 0 END) as usuarios,
         SUM(CASE WHEN rol = 'consulta' THEN 1 ELSE 0 END) as consultas,
         SUM(CASE WHEN rol = 'tiempos' THEN 1 ELSE 0 END) as tiempos,
+        SUM(CASE WHEN rol = 'estructura' THEN 1 ELSE 0 END) as estructuras,
         MAX(fecha_creacion) as ultimo_registro
       FROM ${this.tabla}
     `;
@@ -311,7 +313,8 @@ export class UsuarioModel extends BaseModel<Usuario> {
         admin: stats.admins || 0,
         usuario: stats.usuarios || 0,
         consulta: stats.consultas || 0,
-        tiempos: stats.tiempos || 0
+        tiempos: stats.tiempos || 0,
+        estructura: stats.estructuras || 0
       },
       ultimoRegistro: stats.ultimo_registro || null
     };

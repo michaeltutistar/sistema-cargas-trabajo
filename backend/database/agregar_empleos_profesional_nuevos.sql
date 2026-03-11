@@ -63,3 +63,4 @@ INSERT IGNORE INTO `empleos` (`id`, `codigo`, `nombre`, `nivel_jerarquico`, `den
 -- SELECT COUNT(*) as total_profesionales FROM empleos WHERE nivel_jerarquico = 'PROFESIONAL';
 -- SELECT * FROM empleos WHERE nivel_jerarquico = 'PROFESIONAL' ORDER BY codigo;
 
+
